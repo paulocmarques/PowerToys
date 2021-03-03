@@ -31,7 +31,7 @@ Microsoft PowerToys is a set of utilities for power users to tune and streamline
 
 #### Stable version
 
-Install from the [Microsoft PowerToys GitHub releases page][github-release-link]. Click on `Assets` to show the files available in the release and then click on `PowerToysSetup-0.31.1-x64.exe` to download the PowerToys installer.
+Install from the [Microsoft PowerToys GitHub releases page][github-release-link]. Click on `Assets` to show the files available in the release and then click on `PowerToysSetup-0.31.2-x64.exe` to download the PowerToys installer.
 
 This is our preferred method.
 
@@ -106,10 +106,10 @@ Our [prioritized roadmap][roadmap] of features and utilities that the core team 
 - SVG thumbnail quality improved
 
 **PowerToys Run**
-- Service management plugin (restart, stop, ...)
-- Registry key plugin 
+- Service management plugin (restart, stop, ...) using the `!` keyword
+- Registry key plugin using the `:` keyword
 - System action plugin (reboot, lock, ...)
-- Hyperbolic functions added to calculator
+- Hyperbolic functions added to calculator (example: `=arsinh(3)`)
 - Icon fixes when running in certain themes
 - Unneeded dependencies removed
 - Bug fixes

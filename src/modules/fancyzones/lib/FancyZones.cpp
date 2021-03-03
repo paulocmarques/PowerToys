@@ -175,6 +175,12 @@ public:
         return m_windowMoveHandler.InMoveSize();
     }
 
+    IFACEMETHODIMP_(Settings::OverlappingZonesAlgorithm)
+    GetOverlappingZonesAlgorithm() noexcept
+    {
+        return m_settings->GetSettings()->overlappingZonesAlgorithm;
+    }
+
     LRESULT WndProc(HWND, UINT, WPARAM, LPARAM) noexcept;
     void OnDisplayChange(DisplayChangeType changeType) noexcept;
     void AddZoneWindow(HMONITOR monitor, const std::wstring& deviceId) noexcept;
@@ -942,7 +948,7 @@ void FancyZones::AddZoneWindow(HMONITOR monitor, const std::wstring& deviceId) n
             if (workArea)
             {
                 m_workAreaHandler.AddWorkArea(m_currentDesktopId, monitor, workArea);
-                FancyZonesDataInstance().SaveFancyZonesData();
+                FancyZonesDataInstance().SaveZoneSettings();
             }
         }
     }

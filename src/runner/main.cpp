@@ -40,6 +40,7 @@
 #include <common/utils/winapi_error.h>
 #include <common/version/version.h>
 #include <common/utils/window.h>
+#include <runner/settings_window.h>
 
 extern updating::notifications::strings Strings;
 
@@ -77,12 +78,8 @@ void open_menu_from_another_instance()
     PostMessageW(hwnd_main, WM_COMMAND, ID_SETTINGS_MENU_COMMAND, 0);
 }
 
-int runner(bool isProcessElevated)
+int runner(bool isProcessElevated, bool openSettings, bool openOobe)
 {
-    std::filesystem::path logFilePath(PTSettingsHelper::get_root_save_folder_location());
-    logFilePath.append(LogSettings::runnerLogPath);
-    Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
-
     Logger::info("Runner is starting. Elevated={}", isProcessElevated);
     DPIAware::EnableDPIAwarenessForThisProcess();
 
@@ -155,6 +152,16 @@ int runner(bool isProcessElevated)
         start_initial_powertoys();
 
         Trace::EventLaunch(get_product_version(), isProcessElevated);
+
+        if (openSettings)
+        {
+            open_settings_window();
+        }
+
+        if (openOobe)
+        {
+            open_oobe_window(); 
+        }
 
         result = run_message_loop();
     }
@@ -331,6 +338,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         break;
     }
 
+    std::filesystem::path logFilePath(PTSettingsHelper::get_root_save_folder_location());
+    logFilePath.append(LogSettings::runnerLogPath);
+    Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
+
     wil::unique_mutex_nothrow msi_mutex;
     wil::unique_mutex_nothrow msix_mutex;
 
@@ -396,6 +407,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
 
+    bool openOobe = false;
+    try
+    {
+        openOobe = !PTSettingsHelper::get_oobe_opened_state();
+        if (openOobe)
+        {
+            PTSettingsHelper::save_oobe_opened_state();
+        }
+    }
+    catch (const std::exception& e)
+    {
+        Logger::error("Failed to get or save OOBE state with an exception: {}", e.what());
+    }
+
     int result = 0;
     try
     {
@@ -404,6 +429,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         modules();
 
         auto general_settings = load_general_settings();
+        const bool openSettings = std::string(lpCmdLine).find("--open-settings") != std::string::npos;
+
 
         // Apply the general settings but don't save it as the modules() variable has not been loaded yet
         apply_general_settings(general_settings, false);
@@ -411,13 +438,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         const bool elevated = is_process_elevated();
         if ((elevated ||
              general_settings.GetNamedBoolean(L"run_elevated", false) == false ||
-             strcmp(lpCmdLine, "--dont-elevate") == 0))
+             std::string(lpCmdLine).find("--dont-elevate") != std::string::npos))
         {
-            result = runner(elevated);
+
+            result = runner(elevated, openSettings, openOobe);
         }
         else
         {
-            schedule_restart_as_elevated();
+            schedule_restart_as_elevated(openSettings);
             result = 0;
         }
     }

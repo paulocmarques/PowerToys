@@ -26,6 +26,19 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
 
         private string settingsConfigFileFolder = string.Empty;
 
+        private enum MoveWindowBehaviour
+        {
+            MoveWindowBasedOnZoneIndex = 0,
+            MoveWindowBasedOnPosition,
+        }
+
+        private enum OverlappingZonesAlgorithm
+        {
+            Smallest = 0,
+            Largest = 1,
+            Positional = 2,
+        }
+
         public FancyZonesViewModel(ISettingsRepository<GeneralSettings> settingsRepository, ISettingsRepository<FancyZonesSettings> moduleSettingsRepository, Func<string, int> ipcMSGCallBackFunc, string configFileSubfolder = "")
         {
             // To obtain the general settings configurations of PowerToys Settings.
@@ -51,7 +64,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
             _mouseSwitch = Settings.Properties.FancyzonesMouseSwitch.Value;
             _overrideSnapHotkeys = Settings.Properties.FancyzonesOverrideSnapHotkeys.Value;
             _moveWindowsAcrossMonitors = Settings.Properties.FancyzonesMoveWindowsAcrossMonitors.Value;
-            _moveWindowsBasedOnPosition = Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value;
+            _moveWindowBehaviour = Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value ? MoveWindowBehaviour.MoveWindowBasedOnPosition : MoveWindowBehaviour.MoveWindowBasedOnZoneIndex;
+            _overlappingZonesAlgorithm = (OverlappingZonesAlgorithm)Settings.Properties.FancyzonesOverlappingZonesAlgorithm.Value;
             _displayChangemoveWindows = Settings.Properties.FancyzonesDisplayChangeMoveWindows.Value;
             _zoneSetChangeMoveWindows = Settings.Properties.FancyzonesZoneSetChangeMoveWindows.Value;
             _appLastZoneMoveWindows = Settings.Properties.FancyzonesAppLastZoneMoveWindows.Value;
@@ -85,7 +99,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
         private bool _mouseSwitch;
         private bool _overrideSnapHotkeys;
         private bool _moveWindowsAcrossMonitors;
-        private bool _moveWindowsBasedOnPosition;
+        private MoveWindowBehaviour _moveWindowBehaviour;
+        private OverlappingZonesAlgorithm _overlappingZonesAlgorithm;
         private bool _displayChangemoveWindows;
         private bool _zoneSetChangeMoveWindows;
         private bool _appLastZoneMoveWindows;
@@ -217,15 +232,53 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
         {
             get
             {
-                return _moveWindowsBasedOnPosition;
+                return _moveWindowBehaviour == MoveWindowBehaviour.MoveWindowBasedOnPosition;
             }
 
             set
             {
-                if (value != _moveWindowsBasedOnPosition)
+                var settingsValue = Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value;
+                if (value != settingsValue)
                 {
-                    _moveWindowsBasedOnPosition = value;
+                    _moveWindowBehaviour = value ? MoveWindowBehaviour.MoveWindowBasedOnPosition : MoveWindowBehaviour.MoveWindowBasedOnZoneIndex;
                     Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public bool MoveWindowsBasedOnZoneIndex
+        {
+            get
+            {
+                return _moveWindowBehaviour == MoveWindowBehaviour.MoveWindowBasedOnZoneIndex;
+            }
+
+            set
+            {
+                var settingsValue = Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value;
+                if (value == settingsValue)
+                {
+                    _moveWindowBehaviour = value ? MoveWindowBehaviour.MoveWindowBasedOnZoneIndex : MoveWindowBehaviour.MoveWindowBasedOnPosition;
+                    Settings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value = !value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public int OverlappingZonesAlgorithmIndex
+        {
+            get
+            {
+                return (int)_overlappingZonesAlgorithm;
+            }
+
+            set
+            {
+                if (value != (int)_overlappingZonesAlgorithm)
+                {
+                    _overlappingZonesAlgorithm = (OverlappingZonesAlgorithm)value;
+                    Settings.Properties.FancyzonesOverlappingZonesAlgorithm.Value = value;
                     NotifyPropertyChanged();
                 }
             }

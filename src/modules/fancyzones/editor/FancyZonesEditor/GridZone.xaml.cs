@@ -73,6 +73,13 @@ namespace FancyZonesEditor
             SplitterThickness = Math.Max(spacing, 1);
 
             ((App)Application.Current).MainWindowSettings.PropertyChanged += ZoneSettings_PropertyChanged;
+            SizeChanged += GridZone_SizeChanged;
+        }
+
+        private void GridZone_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            WidthLabel.Text = Math.Round(ActualWidth).ToString();
+            HeightLabel.Text = Math.Round(ActualHeight).ToString();
         }
 
         private void ZoneSettings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

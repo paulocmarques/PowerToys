@@ -1,63 +1,57 @@
 # Microsoft PowerToys
 
-<img src="./doc/images/overview/PT%20hero%20image.png"/>
+![Hero image for Microsoft PowerToys](doc/images/overview/PT_hero_image.png)
 
-[Downloads & Release notes][github-release-link] | [Contributing to PowerToys](#contributing) | [What's Happening](#whats-happening) | [Roadmap](#powertoys-roadmap)
+[How to use PowerToys][usingPowerToys-docs-link] | [Downloads & Release notes][github-release-link] | [Contributing to PowerToys](#contributing) | [What's Happening](#whats-happening) | [Roadmap](#powertoys-roadmap)
 
 ## Build status
 
-| Architecture | Master | Stable | Installer |
-|--------------|--------|--------|-----------|
-| x64 | [![Build Status for Master](https://dev.azure.com/ms/PowerToys/_apis/build/status/microsoft.PowerToys?branchName=master)](https://dev.azure.com/ms/PowerToys/_build/latest?definitionId=219&branchName=master) | [![Build Status for Stable](https://dev.azure.com/ms/PowerToys/_apis/build/status/microsoft.PowerToys?branchName=stable)](https://dev.azure.com/ms/PowerToys/_build/latest?definitionId=219&branchName=stable) | [![Build Status for Installer](https://github-private.visualstudio.com/microsoft/_apis/build/status/CDPX/powertoys/powertoys-Windows-Official-master-Test?branchName=master)](https://github-private.visualstudio.com/microsoft/_build/latest?definitionId=61&branchName=master) |
+| Architecture | Solution (Main) | Solution (Stable) | Installer (Main) |
+|--------------|-----------------|-------------------|------------------|
+| x64 | [![Build Status for Main](https://dev.azure.com/ms/PowerToys/_apis/build/status/microsoft.PowerToys?branchName=main)](https://dev.azure.com/ms/PowerToys/_build/latest?definitionId=219&branchName=main) | [![Build Status for Stable](https://dev.azure.com/ms/PowerToys/_apis/build/status/microsoft.PowerToys?branchName=stable)](https://dev.azure.com/ms/PowerToys/_build/latest?definitionId=219&branchName=stable) | [![Build Status Installer pipeline](https://dev.azure.com/microsoft/Dart/_apis/build/status/microsoft.PowerToys?branchName=main)](https://dev.azure.com/microsoft/Dart/_build/latest?definitionId=76541&branchName=main) |
+| ARM64 | Currently investigating | [Issue #490](https://github.com/microsoft/PowerToys/issues/490) |  |
 
 ## About
 
-Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows 10 experience for greater productivity. For more info on [PowerToys overviews and guides][usingPowerToys-docs-link], or any other tools and resources for [Windows development environments](https://docs.microsoft.com/windows/dev-environment/overview), head over to [docs.microsoft.com][usingPowerToys-docs-link]! 
+Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity. For more info on [PowerToys overviews and how to use the utilities][usingPowerToys-docs-link], or any other tools and resources for [Windows development environments](https://docs.microsoft.com/windows/dev-environment/overview), head over to [docs.microsoft.com][usingPowerToys-docs-link]! 
 
 |              | Current utilities: |              |
 |--------------|--------------------|--------------|
-| [Color Picker](https://aka.ms/PowerToysOverview_ColorPicker) |  [FancyZones](https://aka.ms/PowerToysOverview_FancyZones) | [File Explorer Add-ons](https://aka.ms/PowerToysOverview_FileExplorerAddOns) |
-| [Image Resizer](https://aka.ms/PowerToysOverview_ImageResizer) | [Keyboard Manager](https://aka.ms/PowerToysOverview_KeyboardManager) | [PowerRename](https://aka.ms/PowerToysOverview_PowerRename) |
-| [PowerToys Run](https://aka.ms/PowerToysOverview_PowerToysRun) | [Shortcut Guide](https://aka.ms/PowerToysOverview_ShortcutGuide) | [Video Conference Mute (Experimental)](https://aka.ms/PowerToysOverview_VideoConference) |
+| [Always on Top](https://aka.ms/PowerToysOverview_AoT) | [PowerToys Awake](https://aka.ms/PowerToysOverview_Awake) | [Color Picker](https://aka.ms/PowerToysOverview_ColorPicker) |
+| [FancyZones](https://aka.ms/PowerToysOverview_FancyZones) | [File Explorer Add-ons](https://aka.ms/PowerToysOverview_FileExplorerAddOns) | [Image Resizer](https://aka.ms/PowerToysOverview_ImageResizer) |
+| [Keyboard Manager](https://aka.ms/PowerToysOverview_KeyboardManager) | [Mouse utilities](https://aka.ms/PowerToysOverview_MouseUtilities) | [PowerRename](https://aka.ms/PowerToysOverview_PowerRename) |
+| [PowerToys Run](https://aka.ms/PowerToysOverview_PowerToysRun) | [Shortcut Guide](https://aka.ms/PowerToysOverview_ShortcutGuide) | [Video Conference Mute](https://aka.ms/PowerToysOverview_VideoConference) |
 
 ## Installing and running Microsoft PowerToys
 
 ### Requirements
 
-- Windows 10 v1903 (build 18362) or better preferred, Windows 10 v1803 (build 17134) minimum.  
-- Have [.NET Core 3.1 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet-core/thank-you/runtime-desktop-3.1.11-windows-x64-installer). The installer should handle this but we want to directly make people aware.
+- Windows 11 or Windows 10 v1903 (18362) or newer.
+- Our installer will install the following items:
+   - [.NET Core 3.1.22 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-desktop-3.1.22-windows-x64-installer) or a newer 3.1.x runtime. This is needed currently for the Settings application.
+   - [.NET 6.02 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-desktop-6.0.2-windows-x64-installer) or a newer 6.0.x runtime. 
+   - [Microsoft Edge WebView2 Runtime](https://go.microsoft.com/fwlink/p/?LinkId=2124703) bootstrapper. This will install the latest version. 
 
 ### Via GitHub with EXE [Recommended]
 
-#### Stable version
-
-Install from the [Microsoft PowerToys GitHub releases page][github-release-link]. Click on `Assets` to show the files available in the release and then click on `PowerToysSetup-0.31.2-x64.exe` to download the PowerToys installer.
+ [Microsoft PowerToys GitHub releases page][github-release-link], click on `Assets` at the bottom to show the files available in the release and then click on `PowerToysSetup-0.56.2-x64.exe` to download the PowerToys installer.
 
 This is our preferred method.
 
-#### Experimental version
-To install the Video Conference mute, please use the [v0.28 pre-release experimental version of PowerToys][github-prerelease-link] to try out this version. It includes all improvements from v0.27 in addition to the Video conference utility. Click on `Assets` to show the files available in the release and then download the .exe installer.
+### Via Microsoft Store
 
-We hope to have an updated version in February 2021 with the new DirectShow driver.
+Install from the [Microsoft Store's PowerToys page][microsoft-store-link]. You must be using the [new Microsoft Store](https://blogs.windows.com/windowsExperience/2021/06/24/building-a-new-open-microsoft-store-on-windows-11/) which will be available for both Windows 11 and Windows 10.
 
 ### Via WinGet (Preview)
-Download PowerToys from [WinGet](https://github.com/microsoft/winget-cli/releases). To install PowerToys, run the following command from the command line / PowerShell:
+Download PowerToys from [WinGet][winget-link]. To install PowerToys, run the following command from the command line / PowerShell:
 
 ```powershell
-WinGet install powertoys
+winget install Microsoft.PowerToys -s winget
 ```
 
 ### Other install methods
 
 There are [community driven install methods](./doc/unofficialInstallMethods.md) such as Chocolatey and Scoop.  If these are your preferred install solutions, this will have the install instructions.
-
-### Processor support
-
-We currently support the matrix below.
-
-| x64 | x86 | ARM64 |
-|:---:|:---:|:---:|
-| [Supported][github-release-link] | [Issue #602](https://github.com/microsoft/PowerToys/issues/602) | [Issue #490](https://github.com/microsoft/PowerToys/issues/490) |
 
 ## Contributing
 
@@ -75,76 +69,109 @@ For guidance on developing for PowerToys, please read the [developer docs](/doc/
 
 Our [prioritized roadmap][roadmap] of features and utilities that the core team is focusing on.
 
-### 0.31 - January 2021 Update
+### 0.56 - February 2022 Update
 
-Our goals for [v0.31 release cycle][github-release-link] were to focus on improving the FancyZones editor, adding in some new features into PowerToys Run, some ARM64 work, and stability. 
+In this release, we focused heavily on stability and improvements.  Below are some of the highlights!
 
-Our [prioritized roadmap][roadmap] of features and utilities that the core team is focusing on for the near future. We fixed a lot of localization issues from our initial release but we may not still be perfect. If you find an issue, please file a [localization bug][loc-bug].
+**Highlights**
 
-#### Highlights from v0.31
+- Upgrade notes!  A big feedback items for new versions was upgrade notes.  We have the release notes on GitHub as well.
+- FancyZones zone limit has been increased to 128 zones.  Before the limit was 40.
+- Timezone conversion plugin for PowerToys Run!  Thanks [@TobiasSekan](https://github.com/TobiasSekan)
+- Child and Popup window support for FancyZones.  To enable, go to Settings→FancyZones→Windows. These were bugs we fixed that without realizing it was a useful feature to most.
+- Find my mouse will now activate via shaking the mouse with a settings change!
+![Find my mouse setting for Activate to shake](https://user-images.githubusercontent.com/1462282/156048784-5a16ae0e-3551-47c6-a601-833acc9e893b.png)
 
-**General**
-- Bug report tool and improved logging now added to our system tray.
-- Added in CodeQL and other CI improvements.
-- OOBE Spec should be finalized
+### Always on Top
 
-**ARM64 Progress**
-- .NET Core upgrade for code bases the PowerToys team controls is complete.  We still have two external dependencies that are .NET Framework that need to be updated.
+- Fixed excess GPU / CPU usage when enabled
+- If border has focus, not closable via F4
+- Changing border sizes should resize correctly for existing windows
+- Border goes away with Outlook modal windows 
 
-**Color Picker** 
-- Bug fixes in editor
+### ColorPicker
 
-**FancyZones**
-- Streamlined, simplified user interface (Massive thanks to [@niels9001](https://github.com/niels9001))
-- Dark mode for the editor
-- Certain settings (e.g. number of zones, spacing settings) can now be set on individual layouts.
-- Bug fixes
+- No longer crashes during theme change
 
-**File explorer**
-- Fixed a bug with SVG preview on OneDrive folders
-- SVG are scaled appropriately when viewbox is provided
-- SVG thumbnail quality improved
+### FancyZones
 
-**PowerToys Run**
-- Service management plugin (restart, stop, ...) using the `!` keyword
-- Registry key plugin using the `:` keyword
-- System action plugin (reboot, lock, ...)
-- Hyperbolic functions added to calculator (example: `=arsinh(3)`)
-- Icon fixes when running in certain themes
-- Unneeded dependencies removed
-- Bug fixes
+- Increased zone limit from 40 to 128.
+- Child and Popup window support for FancyZones. To enable, go to Settings→FancyZones→Windows. These were bugs we fixed that without realizing it was a useful feature to most.
 
-**Installer**
-- Default to .NET Core 3.1.11
+### File explorer
+
+- Fixes for Dev file preview: (Thanks [@Aaron-Junker](https://github.com/Aaron-Junker))
+  - Fix fix for object reference not set.
+  - Fix for encoding UTF-8.
+  - Fix for file is in use. 
+  - Fix for saying the file is too big.
+
+### Image Resizer
+
+- Fix for `invalid operation` error. [@CleanCodeDeveloper](https://github.com/CleanCodeDeveloper)!
+
+### Mouse utility
+
+- Find my mouse will now activate via shaking the mouse with a settings change!
+- Find my mouse now can excludes apps.
+- Fix for crosshair thickness looking odd due to anti-aliasing
+- Fix for a hard crash on crosshair (This was a hotfix for 0.55)
+
+### PowerRename
+
+- Will not spells check file names anymore. Thanks [@niels9001](https://github.com/niels9001)
+- Autocomplete result box to not obscure apply button. Thanks [@niels9001](https://github.com/niels9001)
+- Regex fix
+
+### PowerToys Run
+
+- Timezone conversion plugin for PowerToys Run!  Thanks [@TobiasSekan](https://github.com/TobiasSekan)
+- Hexadecimal and binary numbers now are supported in the calculator plugin. This was added a bit ago and we'd like to extend a belated thanks to [@gsuberland](https://github.com/gsuberland)
+- Terminal plugin performance boost.  Thanks [@htcfreek](https://github.com/htcfreek)!
+- Terminal will now be found via the Program plugin again.  
+- Shutdown command is now using hybrid fast argument for shutting down
+- Support for VSCodium with VS Code workplace plugin. Thanks [@makeProjectGreatAgain](https://github.com/makeProjectGreatAgain)
+
+### Video conference mute
+
+- nVidia Broadcast software won't crash anymore
+
+### Settings
+
+- Upgrade notes in OOBE
+- Fix for settings being lost (This was a hotfix for 0.55)
+- UX improvements. Thanks [@niels9001](https://github.com/niels9001)
+
+### Installer
+
+- Believe we have a fix for the long hated "app.dark.png is missing" error. Thanks to [@robmen](https://github.com/robmen) for having a great blog!
+- Installer will launch PowerToys under appropriate elevation versus Admin only due to UAC prompt for installation (This was a hotfix for 0.55)
+- PowerToys will now start if installed under different user
+
+### Development
+
+- ARM64 - We removed the last .NET Framework dependency.  Thanks [@snickler](https://github.com/snickler) for helping get this across the finish line!
+- .NET 6 upgrade, now on the newest and hottest .NET runtime
+- Code analyzers have been upgraded!  Thanks [@CleanCodeDeveloper](https://github.com/CleanCodeDeveloper)!
+- Symbols are back!
+- Code refactoring, thanks [@CleanCodeDeveloper](https://github.com/CleanCodeDeveloper) and [@cyberrex5](https://github.com/cyberrex5) for helping here!
+- We are now on VS 2022 with the .NET 6 upgrade.
 
 #### Community contributions
 
-We'd like to directly mention (in alphabetical order) for their continued community support this month and helping directly make PowerToys a better piece of software.  
+We'd like to directly mention certain contributors (in alphabetical order) for their continued community support this month and helping directly make PowerToys a better piece of software. 
+[@Aaron-Junker](https://github.com/Aaron-Junker), [@CleanCodeDeveloper](https://github.com/CleanCodeDeveloper), [@cyberrex5](https://github.com/cyberrex5), [@franky920920](https://github.com/franky920920), [@gsuberland](https://github.com/gsuberland), [@htcfreek](https://github.com/htcfreek), [@jay-o-way](https://github.com/jay-o-way), [@makeProjectGreatAgain](https://github.com/makeProjectGreatAgain), [@niels9001](https://github.com/niels9001), [@robmen](https://github.com/robmen), [@snickler](https://github.com/snickler), and [@TobiasSekan ](https://github.com/TobiasSekan).
 
-[@Aaron-Junker](https://github.com/Aaron-Junker), 
-[@BenConstable9](https://github.com/BenConstable9), 
-[@chrdavis](https://github.com/chrdavis), 
-[@davidegiacometti](https://github.com/davidegiacometti), 
-[@ExecThTs](https://github.com/ExecThTs), 
-[@htcfreek](https://github.com/htcfreek), 
-[@itsme-alan](https://github.com/itsme-alan), 
-[@jay-o-way](https://github.com/jay-o-way), 
-[@martinchrzan](https://github.com/martinchrzan), 
-[@niels9001](https://github.com/niels9001), 
-[@pavelzw](https://github.com/pavelzw), 
-and 
-[@TobiasSekan](https://github.com/TobiasSekan) 
 
-#### What is being planned for v0.33 - February 2021
+#### What is being planned for v0.57
 
-For [v0.33][github-next-release-work], we are proactively working on:
+For [v0.57][github-next-release-work], we'll start work on below:
 
-- Stability
-- Video conference mute's new DirectShow filter should be ready shortly for testing and we hope to have the utility inside the official 0.33 build
-- OOBE dialog
-- Plugin Manager
-
-For 0.35, we aim to focus mainly on getting all the parts needed to support ARM64 support.  This includes our installer, CI system, build server, and upgrading all projects to .NET Core projects to .NET 5.
+- Start work on two new PowerToys
+- Improvements to PowerToy Run plugins
+- Stability / bug fixes
+- Validation pass again using WinUI 3.1 for Settings
+- Adding new file types to dev file preview
 
 ## PowerToys Community
 
@@ -161,13 +188,15 @@ The application logs basic telemetry. Our Telemetry Data page (Coming Soon) has 
 [oss-CLA]: https://cla.opensource.microsoft.com
 [oss-conduct-code]: CODE_OF_CONDUCT.md
 [community-link]: COMMUNITY.md
-[github-release-link]: https://github.com/microsoft/PowerToys/releases/
+[github-release-link]: https://aka.ms/installPowerToys
+[microsoft-store-link]: https://aka.ms/getPowertoys
+[winget-link]: https://github.com/microsoft/winget-cli#installing-the-client
 [roadmap]: https://github.com/microsoft/PowerToys/wiki/Roadmap
 [privacy-link]: http://go.microsoft.com/fwlink/?LinkId=521839
 [vidConfOverview]: https://aka.ms/PowerToysOverview_VideoConference
 [loc-bug]: https://github.com/microsoft/PowerToys/issues/new?assignees=&labels=&template=translation_issue.md&title=
-[usingPowerToys-docs-link]: https://docs.microsoft.com/windows/powertoys/
+[usingPowerToys-docs-link]: https://aka.ms/powertoys-docs
 
 <!-- items that need to be updated release to release -->
-[github-next-release-work]: https://github.com/microsoft/PowerToys/issues?q=is%3Aopen+is%3Aissue+project%3Amicrosoft%2FPowerToys%2F17
-[github-prerelease-link]: https://github.com/microsoft/PowerToys/releases/tag/v0.28.0
+[github-next-release-work]: https://github.com/microsoft/PowerToys/issues?q=is%3Aopen+is%3Aissue+project%3Amicrosoft%2FPowerToys%2F30
+[github-current-release-work]: https://github.com/microsoft/PowerToys/issues?q=is%3Aopen+is%3Aissue+project%3Amicrosoft%2FPowerToys%2F29

@@ -15,15 +15,11 @@ namespace FancyZonesEditor.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public delegate void MonitorChangedEventHandler(MonitorChangedEventArgs args);
+        public delegate void MonitorChangedEvent(MonitorChangedEventArgs args);
 
         public ObservableCollection<MonitorInfoModel> MonitorInfoForViewModel { get; set; }
 
         public static double DesktopPreviewMultiplier { get; private set; }
-
-        public RelayCommand AddCommand { get; set; }
-
-        public RelayCommand DeleteCommand { get; set; }
 
         public RelayCommand<MonitorInfoModel> SelectCommand { get; set; }
 
@@ -48,7 +44,7 @@ namespace FancyZonesEditor.ViewModels
 
             double maxMultiplier = MaxPreviewDisplaySize / maxDimension;
             double minMultiplier = MinPreviewDisplaySize / minDimension;
-            DesktopPreviewMultiplier = (minMultiplier + maxMultiplier) / 3.5;
+            DesktopPreviewMultiplier = (minMultiplier + maxMultiplier) / 2.5;
         }
 
         private void RaisePropertyChanged(string propertyName)

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using ManagedCommon;
 using Wox.Plugin;
 using Wox.Plugin.Logger;
@@ -33,7 +34,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
             }
 
             NumberTranslator translator = NumberTranslator.Create(CultureInfo.CurrentCulture, new CultureInfo("en-US"));
-            var input = translator.Translate(query.Search);
+            var input = translator.Translate(query.Search.Normalize(NormalizationForm.FormKC));
 
             if (!CalculateHelper.InputValid(input))
             {
@@ -74,7 +75,6 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
             UpdateIconPath(Context.API.GetCurrentTheme());
         }
 
-        // Todo : Update with theme based IconPath
         private void UpdateIconPath(Theme theme)
         {
             if (theme == Theme.Light || theme == Theme.HighContrastWhite)
@@ -114,7 +114,11 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
             {
                 if (disposing)
                 {
-                    Context.API.ThemeChanged -= OnThemeChanged;
+                    if (Context != null && Context.API != null)
+                    {
+                        Context.API.ThemeChanged -= OnThemeChanged;
+                    }
+
                     _disposed = true;
                 }
             }

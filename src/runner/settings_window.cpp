@@ -8,10 +8,8 @@
 #include <common/interop/two_way_pipe_message_ipc.h>
 #include "tray_icon.h"
 #include "general_settings.h"
-#include <common/themes/windows_colors.h>
 #include "restart_elevated.h"
-#include "update_state.h"
-#include "update_utils.h"
+#include "UpdateUtils.h"
 #include "centralized_kb_hook.h"
 
 #include <common/utils/json.h>
@@ -20,10 +18,12 @@
 #include <common/version/helper.h>
 #include <common/logger/logger.h>
 #include <common/utils/elevation.h>
-#include <common/utils/os-detect.h>
 #include <common/utils/process_path.h>
 #include <common/utils/timeutil.h>
 #include <common/utils/winapi_error.h>
+#include <common/updating/updateState.h>
+#include <common/themes/windows_colors.h>
+#include "settings_window.h"
 
 #define BUFSIZE 1024
 
@@ -41,7 +41,7 @@ json::JsonObject get_power_toys_settings()
         }
         catch (...)
         {
-            Logger::error("get_power_toys_settings: got malformed json");
+            Logger::error(L"get_power_toys_settings(): got malformed json for {} module", name);
         }
     }
     return result;
@@ -85,34 +85,16 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                 }
                 else if (action == L"check_for_updates")
                 {
-                    if (auto update_check_result = check_for_updates())
-                    {
-                        VersionHelper latestVersion{ VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION };
-                        bool isVersionLatest = true;
-                        if (auto new_version = std::get_if<updating::new_version_download_info>(&*update_check_result))
-                        {
-                            latestVersion = new_version->version;
-                            isVersionLatest = false;
-                        }
-                        json::JsonObject json;
-                        json.SetNamedValue(L"version", json::value(latestVersion.toWstring()));
-                        json.SetNamedValue(L"isVersionLatest", json::value(isVersionLatest));
-
-                        result.emplace(json.Stringify());
-
-                        UpdateState::store([](UpdateState& state) {
-                            state.github_update_last_checked_date.emplace(timeutil::now());
-                        });
-                    }
+                    CheckForUpdatesCallback();
                 }
                 else if (action == L"request_update_state_date")
                 {
                     json::JsonObject json;
 
                     auto update_state = UpdateState::read();
-                    if (update_state.github_update_last_checked_date)
+                    if (update_state.githubUpdateLastCheckedDate)
                     {
-                        const time_t date = *update_state.github_update_last_checked_date;
+                        const time_t date = *update_state.githubUpdateLastCheckedDate;
                         json.SetNamedValue(L"updateStateDate", json::value(std::to_wstring(date)));
                     }
 
@@ -140,6 +122,7 @@ void send_json_config_to_module(const std::wstring& module_key, const std::wstri
     {
         moduleIt->second->set_config(settings.c_str());
         moduleIt->second.update_hotkeys();
+        moduleIt->second.UpdateHotkeyEx();
     }
 }
 
@@ -277,7 +260,7 @@ BOOL run_settings_non_elevated(LPCWSTR executable_path, LPWSTR executable_args, 
 
 DWORD g_settings_process_id = 0;
 
-void run_settings_window(bool showOobeWindow)
+void run_settings_window(bool show_oobe_window, bool show_scoobe_window, std::optional<std::wstring> settings_window)
 {
     g_isLaunchInProgress = true;
 
@@ -294,14 +277,7 @@ void run_settings_window(bool showOobeWindow)
     // Arg 1: executable path.
     std::wstring executable_path = get_module_folderpath();
 
-    if (UseNewSettings())
-    {
-        executable_path.append(L"\\Settings\\PowerToys.Settings.exe");
-    }
-    else
-    {
-        executable_path.append(L"\\PowerToysSettings.exe");
-    }
+    executable_path.append(L"\\Settings\\PowerToys.Settings.exe");
 
     // Args 2,3: pipe server. Generate unique names for the pipes, if getting a UUID is possible.
     std::wstring powertoys_pipe_name(L"\\\\.\\pipe\\powertoys_runner_");
@@ -343,13 +319,16 @@ void run_settings_window(bool showOobeWindow)
     // Arg 6: elevated status
     bool isElevated{ get_general_settings().isElevated };
     std::wstring settings_elevatedStatus = isElevated ? L"true" : L"false";
-    
+
     // Arg 7: is user an admin
     bool isAdmin{ get_general_settings().isAdmin };
     std::wstring settings_isUserAnAdmin = isAdmin ? L"true" : L"false";
 
     // Arg 8: should oobe window be shown
-    std::wstring settings_showOobe = showOobeWindow ? L"true" : L"false";
+    std::wstring settings_showOobe = show_oobe_window ? L"true" : L"false";
+
+    // Arg 9: should scoobe window be shown
+    std::wstring settings_showScoobe = show_scoobe_window ? L"true" : L"false";
 
     // create general settings file to initialize the settings file with installation configurations like :
     // 1. Run on start up.
@@ -371,15 +350,23 @@ void run_settings_window(bool showOobeWindow)
     executable_args.append(settings_isUserAnAdmin);
     executable_args.append(L" ");
     executable_args.append(settings_showOobe);
-    
+    executable_args.append(L" ");
+    executable_args.append(settings_showScoobe);
+
+    if (settings_window.has_value())
+    {
+        executable_args.append(L" ");
+        executable_args.append(settings_window.value());
+    }
+
     BOOL process_created = false;
 
-    // Due to a bug in .NET, running the Settings process as non-elevated
-    // from an elevated process sometimes results in a crash.
-    // TODO: Revisit this after switching to .NET 5
-    if (is_process_elevated() && !UseNewSettings())
+    if (is_process_elevated())
     {
-        process_created = run_settings_non_elevated(executable_path.c_str(), executable_args.data(), &process_info);
+        // TODO: Revisit this after switching to .NET 5
+        // Due to a bug in .NET, running the Settings process as non-elevated
+        // from an elevated process sometimes results in a crash.
+        // process_created = run_settings_non_elevated(executable_path.c_str(), executable_args.data(), &process_info);
     }
 
     if (FALSE == process_created)
@@ -475,7 +462,17 @@ void bring_settings_to_front()
             }
             if (wcsncmp(title, windowTitle.c_str(), len) == 0)
             {
-                ShowWindow(hwnd, SW_RESTORE);
+                auto lStyles = GetWindowLong(hwnd, GWL_STYLE);
+
+                if (lStyles & WS_MAXIMIZE)
+                {
+                    ShowWindow(hwnd, SW_MAXIMIZE);
+                }
+                else
+                {
+                    ShowWindow(hwnd, SW_RESTORE);
+                }
+
                 SetForegroundWindow(hwnd);
                 return FALSE;
             }
@@ -487,7 +484,7 @@ void bring_settings_to_front()
     EnumWindows(callback, 0);
 }
 
-void open_settings_window()
+void open_settings_window(std::optional<std::wstring> settings_window)
 {
     if (g_settings_process_id != 0)
     {
@@ -497,8 +494,8 @@ void open_settings_window()
     {
         if (!g_isLaunchInProgress)
         {
-            std::thread([]() {
-                run_settings_window(false);
+            std::thread([settings_window]() {
+                run_settings_window(false, false, settings_window);
             }).detach();
         }
     }
@@ -519,6 +516,109 @@ void close_settings_window()
 void open_oobe_window()
 {
     std::thread([]() {
-        run_settings_window(true);
+        run_settings_window(true, false, std::nullopt);
     }).detach();
+}
+
+void open_scoobe_window()
+{
+    std::thread([]() {
+        run_settings_window(false, true, std::nullopt);
+    }).detach();
+}
+
+std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
+{
+    switch (value)
+    {
+    case ESettingsWindowNames::Overview:
+        return "Overview";
+    case ESettingsWindowNames::Awake:
+        return "Awake";
+    case ESettingsWindowNames::ColorPicker:
+        return "ColorPicker";
+    case ESettingsWindowNames::FancyZones:
+        return "FancyZones";
+    case ESettingsWindowNames::Run:
+        return "Run";
+    case ESettingsWindowNames::ImageResizer:
+        return "ImageResizer";
+    case ESettingsWindowNames::KBM:
+        return "KBM";
+    case ESettingsWindowNames::MouseUtils:
+        return "MouseUtils";
+    case ESettingsWindowNames::PowerRename:
+        return "PowerRename";
+    case ESettingsWindowNames::FileExplorer:
+        return "FileExplorer";
+    case ESettingsWindowNames::ShortcutGuide:
+        return "ShortcutGuide";
+    case ESettingsWindowNames::VideoConference:
+        return "VideoConference";
+    default:
+    {
+        Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
+        assert(false);
+    }
+    }
+    return "";
+}
+
+ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
+{
+    if (value == "Overview")
+    {
+        return ESettingsWindowNames::Overview;
+    }
+    else if (value == "Awake")
+    {
+        return ESettingsWindowNames::Awake;
+    }
+    else if (value == "ColorPicker")
+    {
+        return ESettingsWindowNames::ColorPicker;
+    }
+    else if (value == "FancyZones")
+    {
+        return ESettingsWindowNames::FancyZones;
+    }
+    else if (value == "Run")
+    {
+        return ESettingsWindowNames::Run;
+    }
+    else if (value == "ImageResizer")
+    {
+        return ESettingsWindowNames::ImageResizer;
+    }
+    else if (value == "KBM")
+    {
+        return ESettingsWindowNames::KBM;
+    }
+    else if (value == "MouseUtils")
+    {
+        return ESettingsWindowNames::MouseUtils;
+    }
+    else if (value == "PowerRename")
+    {
+        return ESettingsWindowNames::PowerRename;
+    }
+    else if (value == "FileExplorer")
+    {
+        return ESettingsWindowNames::FileExplorer;
+    }
+    else if (value == "ShortcutGuide")
+    {
+        return ESettingsWindowNames::ShortcutGuide;
+    }
+    else if (value == "VideoConference")
+    {
+        return ESettingsWindowNames::VideoConference;
+    }
+    else
+    {
+        Logger::error(L"Can't convert string value={} to ESettingsWindowNames", winrt::to_hstring(value));
+        assert(false);
+    }
+
+    return ESettingsWindowNames::Overview;
 }

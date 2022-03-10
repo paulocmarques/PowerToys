@@ -13,11 +13,10 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
+using Wox.Plugin.Common;
 using Wox.Plugin.Logger;
-using Wox.Plugin.SharedCommands;
 using Control = System.Windows.Controls.Control;
 
 namespace Microsoft.Plugin.Shell
@@ -156,8 +155,8 @@ namespace Microsoft.Plugin.Shell
 
         private ProcessStartInfo PrepareProcessStartInfo(string command, bool runAsAdministrator = false)
         {
-            command = command.Trim();
-            command = Environment.ExpandEnvironmentVariables(command);
+            string trimmedCommand = command.Trim();
+            command = Environment.ExpandEnvironmentVariables(trimmedCommand);
             var workingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var runAsAdministratorArg = !runAsAdministrator && !_settings.RunAsAdministrator ? string.Empty : "runas";
 
@@ -218,7 +217,7 @@ namespace Microsoft.Plugin.Shell
 
             info.UseShellExecute = true;
 
-            _settings.AddCmdHistory(command);
+            _settings.AddCmdHistory(trimmedCommand);
 
             return info;
         }

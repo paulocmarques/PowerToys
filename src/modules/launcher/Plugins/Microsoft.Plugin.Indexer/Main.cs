@@ -11,9 +11,9 @@ using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using ManagedCommon;
 using Microsoft.Plugin.Indexer.DriveDetection;
+using Microsoft.Plugin.Indexer.Interop;
 using Microsoft.Plugin.Indexer.SearchHelper;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.Search.Interop;
 using Wox.Infrastructure;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
@@ -67,7 +67,7 @@ namespace Microsoft.Plugin.Indexer
         // To save the configurations of plugins
         public void Save()
         {
-            _storage.Save();
+            _storage?.Save();
         }
 
         // This function uses the Windows indexer and returns the list of results obtained

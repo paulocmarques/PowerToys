@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
+using System.Windows.Threading;
 using interop;
 using Microsoft.PowerLauncher.Telemetry;
 using Microsoft.PowerToys.Telemetry;
@@ -27,6 +27,7 @@ using Wox.Plugin.Logger;
 
 namespace PowerLauncher.ViewModel
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1309:Use ordinal string comparison", Justification = "Using CurrentCultureIgnoreCase for user facing strings. Each usage is attributed with a comment.")]
     public class MainViewModel : BaseModel, ISavable, IDisposable
     {
         private string _currentQuery;
@@ -50,7 +51,13 @@ namespace PowerLauncher.ViewModel
         private bool _saved;
         private ushort _hotkeyHandle;
 
-        internal HotkeyManager HotkeyManager { get; set; }
+        private const int _globalHotKeyId = 0x0001;
+        private IntPtr _globalHotKeyHwnd;
+        private uint _globalHotKeyVK;
+        private uint _globalHotKeyFSModifiers;
+        private bool _usingGlobalHotKey;
+
+        internal HotkeyManager HotkeyManager { get; private set; }
 
         public MainViewModel(PowerToysRunSettings settings)
         {
@@ -73,37 +80,56 @@ namespace PowerLauncher.ViewModel
 
             InitializeKeyCommands();
             RegisterResultsUpdatedEvent();
+        }
 
-            if (settings != null && settings.UsePowerToysRunnerKeyboardHook)
+        public void RegisterHotkey(IntPtr hwnd)
+        {
+            Log.Info("RegisterHotkey()", GetType());
+
+            // Allow OOBE to call PowerToys Run.
+            NativeEventWaiter.WaitForEventLoop(Constants.PowerLauncherSharedEvent(), OnHotkey);
+
+            if (_settings.StartedFromPowerToysRunner)
             {
-                NativeEventWaiter.WaitForEventLoop(Constants.PowerLauncherSharedEvent(), OnHotkey);
-                _hotkeyHandle = 0;
+                // Allow runner to call PowerToys Run from the centralized keyboard hook.
+                NativeEventWaiter.WaitForEventLoop(Constants.PowerLauncherCentralizedHookSharedEvent(), OnCentralizedKeyboardHookHotKey);
             }
-            else
+
+            _settings.PropertyChanged += (s, e) =>
             {
-                HotkeyManager = new HotkeyManager();
-                _settings.PropertyChanged += (s, e) =>
+                if (e.PropertyName == nameof(PowerToysRunSettings.Hotkey) || e.PropertyName == nameof(PowerToysRunSettings.UseCentralizedKeyboardHook))
                 {
-                    if (e.PropertyName == nameof(PowerToysRunSettings.Hotkey))
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
+                        if (!string.IsNullOrEmpty(_settings.PreviousHotkey))
                         {
-                            if (!string.IsNullOrEmpty(_settings.PreviousHotkey))
+                            if (_usingGlobalHotKey)
                             {
-                                HotkeyManager.UnregisterHotkey(_hotkeyHandle);
+                                NativeMethods.UnregisterHotKey(_globalHotKeyHwnd, _globalHotKeyId);
+                                _usingGlobalHotKey = false;
+                                Log.Info("Unregistering previous global hotkey", GetType());
                             }
 
-                            if (!string.IsNullOrEmpty(_settings.Hotkey))
+                            if (_hotkeyHandle != 0)
                             {
-                                SetHotkey(_settings.Hotkey, OnHotkey);
+                                HotkeyManager?.UnregisterHotkey(_hotkeyHandle);
+                                _hotkeyHandle = 0;
+                                Log.Info("Unregistering previous low level key handler", GetType());
                             }
-                        });
-                    }
-                };
+                        }
 
-                SetHotkey(_settings.Hotkey, OnHotkey);
-                SetCustomPluginHotkey();
-            }
+                        if (!string.IsNullOrEmpty(_settings.Hotkey))
+                        {
+                            SetHotkey(hwnd, _settings.Hotkey, OnHotkey);
+                        }
+                    });
+                }
+            };
+
+            SetHotkey(hwnd, _settings.Hotkey, OnHotkey);
+
+            // TODO: Custom plugin hotkeys.
+            // SetCustomPluginHotkey();
         }
 
         private void RegisterResultsUpdatedEvent()
@@ -154,7 +180,7 @@ namespace PowerLauncher.ViewModel
                     // SelectedItem returns null if selection is empty.
                     if (result != null && result.Action != null)
                     {
-                        MainWindowVisibility = Visibility.Collapsed;
+                        Hide();
 
                         Application.Current.Dispatcher.Invoke(() =>
                         {
@@ -168,9 +194,24 @@ namespace PowerLauncher.ViewModel
                         {
                             // todo: revert _userSelectedRecordStorage.Save() and _historyItemsStorage.Save() after https://github.com/microsoft/PowerToys/issues/9164 is done
                             _userSelectedRecord.Add(result);
-                            _userSelectedRecordStorage.Save();
+                            try
+                            {
+                                _userSelectedRecordStorage.Save();
+                            }
+                            catch (UnauthorizedAccessException ex)
+                            {
+                                Log.Warn($"Failed to save file. ${ex.Message}", this.GetType());
+                            }
+
                             _history.Add(result.OriginQuery.RawQuery);
-                            _historyItemsStorage.Save();
+                            try
+                            {
+                                _historyItemsStorage.Save();
+                            }
+                            catch (UnauthorizedAccessException ex)
+                            {
+                                Log.Warn($"Failed to save file. ${ex.Message}", this.GetType());
+                            }
                         }
                         else
                         {
@@ -193,7 +234,7 @@ namespace PowerLauncher.ViewModel
                 }
                 else
                 {
-                    MainWindowVisibility = Visibility.Collapsed;
+                    Hide();
                 }
             });
 
@@ -237,8 +278,6 @@ namespace PowerLauncher.ViewModel
                 SelectedResults.SelectPrevPage();
             });
 
-            SelectFirstResultCommand = new RelayCommand(_ => SelectedResults.SelectFirstResult());
-
             OpenResultWithKeyboardCommand = new RelayCommand(index =>
             {
                 OpenResultsEvent(index, false);
@@ -247,31 +286,6 @@ namespace PowerLauncher.ViewModel
             OpenResultWithMouseCommand = new RelayCommand(index =>
             {
                 OpenResultsEvent(index, true);
-            });
-
-            LoadContextMenuCommand = new RelayCommand(_ =>
-            {
-                if (SelectedIsFromQueryResults())
-                {
-                    SelectedResults = ContextMenu;
-                }
-                else
-                {
-                    SelectedResults = Results;
-                }
-            });
-
-            LoadHistoryCommand = new RelayCommand(_ =>
-            {
-                if (SelectedIsFromQueryResults())
-                {
-                    SelectedResults = History;
-                    History.SelectedIndex = _history.Items.Count - 1;
-                }
-                else
-                {
-                    SelectedResults = Results;
-                }
             });
 
             ClearQueryCommand = new RelayCommand(_ =>
@@ -285,10 +299,6 @@ namespace PowerLauncher.ViewModel
                 }
             });
         }
-
-        public Brush MainWindowBackground { get; set; }
-
-        public Brush MainWindowBorderBrush { get; set; }
 
         private ResultsViewModel _results;
 
@@ -382,26 +392,13 @@ namespace PowerLauncher.ViewModel
                 {
                     Results.Visibility = Visibility.Hidden;
                     _queryTextBeforeLeaveResults = QueryText;
-
-                    // Because of Fody's optimization
-                    // setter won't be called when property value is not changed.
-                    // so we need manually call Query()
-                    // http://stackoverflow.com/posts/25895769/revisions
-                    if (string.IsNullOrEmpty(QueryText))
-                    {
-                        Query();
-                    }
-                    else
-                    {
-                        QueryText = string.Empty;
-                    }
                 }
 
                 _selectedResults.Visibility = Visibility.Visible;
             }
         }
 
-        public Visibility ProgressBarVisibility { get; set; }
+        public bool LoadedAtLeastOnce { get; set; }
 
         private Visibility _visibility;
 
@@ -417,51 +414,49 @@ namespace PowerLauncher.ViewModel
                 if (_visibility != value)
                 {
                     _visibility = value;
-                    OnPropertyChanged(nameof(MainWindowVisibility));
-                }
+                    if (LoadedAtLeastOnce)
+                    {
+                        // Don't trigger telemetry on cold boot. Must have been loaded at least once.
+                        if (value == Visibility.Visible)
+                        {
+                            PowerToysTelemetry.Log.WriteEvent(new LauncherShowEvent());
+                        }
+                        else
+                        {
+                            PowerToysTelemetry.Log.WriteEvent(new LauncherHideEvent());
+                        }
+                    }
 
-                if (value == Visibility.Visible)
-                {
-                    PowerToysTelemetry.Log.WriteEvent(new LauncherShowEvent());
-                }
-                else
-                {
-                    PowerToysTelemetry.Log.WriteEvent(new LauncherHideEvent());
+                    OnPropertyChanged(nameof(MainWindowVisibility));
                 }
             }
         }
 
-        public ICommand IgnoreCommand { get; set; }
+        public ICommand IgnoreCommand { get; private set; }
 
-        public ICommand EscCommand { get; set; }
+        public ICommand EscCommand { get; private set; }
 
-        public ICommand SelectNextItemCommand { get; set; }
+        public ICommand SelectNextItemCommand { get; private set; }
 
-        public ICommand SelectPrevItemCommand { get; set; }
+        public ICommand SelectPrevItemCommand { get; private set; }
 
-        public ICommand SelectNextContextMenuItemCommand { get; set; }
+        public ICommand SelectNextContextMenuItemCommand { get; private set; }
 
-        public ICommand SelectPreviousContextMenuItemCommand { get; set; }
+        public ICommand SelectPreviousContextMenuItemCommand { get; private set; }
 
-        public ICommand SelectNextTabItemCommand { get; set; }
+        public ICommand SelectNextTabItemCommand { get; private set; }
 
-        public ICommand SelectPrevTabItemCommand { get; set; }
+        public ICommand SelectPrevTabItemCommand { get; private set; }
 
-        public ICommand SelectNextPageCommand { get; set; }
+        public ICommand SelectNextPageCommand { get; private set; }
 
-        public ICommand SelectPrevPageCommand { get; set; }
+        public ICommand SelectPrevPageCommand { get; private set; }
 
-        public ICommand SelectFirstResultCommand { get; set; }
+        public ICommand OpenResultWithKeyboardCommand { get; private set; }
 
-        public ICommand LoadContextMenuCommand { get; set; }
+        public ICommand OpenResultWithMouseCommand { get; private set; }
 
-        public ICommand LoadHistoryCommand { get; set; }
-
-        public ICommand OpenResultWithKeyboardCommand { get; set; }
-
-        public ICommand OpenResultWithMouseCommand { get; set; }
-
-        public ICommand ClearQueryCommand { get; set; }
+        public ICommand ClearQueryCommand { get; private set; }
 
         public void Query()
         {
@@ -580,11 +575,12 @@ namespace PowerLauncher.ViewModel
                                     Results.Sort();
                                     Results.SelectedItem = Results.Results.FirstOrDefault();
                                 }
+
+                                currentCancellationToken.ThrowIfCancellationRequested();
+                                UpdateResultsListViewAfterQuery(queryText);
                             }
 
-                            currentCancellationToken.ThrowIfCancellationRequested();
-
-                            UpdateResultsListViewAfterQuery(queryText);
+                            bool noInitialResults = numResults == 0;
 
                             // Run the slower query of the DelayedExecution plugins
                             currentCancellationToken.ThrowIfCancellationRequested();
@@ -616,12 +612,11 @@ namespace PowerLauncher.ViewModel
                                                     currentCancellationToken.ThrowIfCancellationRequested();
                                                     numResults = Results.Results.Count;
                                                     Results.Sort();
-                                                    Results.SelectedItem = Results.Results.FirstOrDefault();
                                                 }
-                                            }
 
-                                            currentCancellationToken.ThrowIfCancellationRequested();
-                                            UpdateResultsListViewAfterQuery(queryText, true);
+                                                currentCancellationToken.ThrowIfCancellationRequested();
+                                                UpdateResultsListViewAfterQuery(queryText, noInitialResults, true);
+                                            }
                                         }
                                     }
                                     catch (OperationCanceledException)
@@ -662,7 +657,7 @@ namespace PowerLauncher.ViewModel
             }
         }
 
-        private void UpdateResultsListViewAfterQuery(string queryText, bool isDelayedInvoke = false)
+        private void UpdateResultsListViewAfterQuery(string queryText, bool noInitialResults = false, bool isDelayedInvoke = false)
         {
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -675,9 +670,13 @@ namespace PowerLauncher.ViewModel
                 if (Results.Results.Count > 0)
                 {
                     Results.Visibility = Visibility.Visible;
-                    if (!isDelayedInvoke)
+                    if (!isDelayedInvoke || noInitialResults)
                     {
                         Results.SelectedIndex = 0;
+                        if (noInitialResults)
+                        {
+                            Results.SelectedItem = Results.Results.FirstOrDefault();
+                        }
                     }
                 }
                 else
@@ -699,15 +698,35 @@ namespace PowerLauncher.ViewModel
             return selected;
         }
 
-        private void SetHotkey(string hotkeyStr, HotkeyCallback action)
+#pragma warning disable CA1801 // Review unused parameters
+        internal bool ProcessHotKeyMessages(IntPtr wparam, IntPtr lparam)
+#pragma warning restore CA1801 // Review unused parameters
         {
-            var hotkey = new HotkeyModel(hotkeyStr);
-            SetHotkey(hotkey, action);
+            if (wparam.ToInt32() == _globalHotKeyId)
+            {
+                OnHotkey();
+                return true;
+            }
+
+            return false;
         }
 
-        private void SetHotkey(HotkeyModel hotkeyModel, HotkeyCallback action)
+        private static uint VKModifiersFromHotKey(Hotkey hotkey)
         {
+            return (uint)(HOTKEY_MODIFIERS.NOREPEAT | (hotkey.Alt ? HOTKEY_MODIFIERS.ALT : 0) | (hotkey.Ctrl ? HOTKEY_MODIFIERS.CONTROL : 0) | (hotkey.Shift ? HOTKEY_MODIFIERS.SHIFT : 0) | (hotkey.Win ? HOTKEY_MODIFIERS.WIN : 0));
+        }
+
+        private void SetHotkey(IntPtr hwnd, string hotkeyStr, HotkeyCallback action)
+        {
+            var hotkey = new HotkeyModel(hotkeyStr);
+            SetHotkey(hwnd, hotkey, action);
+        }
+
+        private void SetHotkey(IntPtr hwnd, HotkeyModel hotkeyModel, HotkeyCallback action)
+        {
+            Log.Info("Set HotKey()", GetType());
             string hotkeyStr = hotkeyModel.ToString();
+
             try
             {
                 Hotkey hotkey = new Hotkey
@@ -719,7 +738,47 @@ namespace PowerLauncher.ViewModel
                     Key = (byte)KeyInterop.VirtualKeyFromKey(hotkeyModel.CharKey),
                 };
 
-                _hotkeyHandle = HotkeyManager.RegisterHotkey(hotkey, action);
+                if (_usingGlobalHotKey)
+                {
+                    NativeMethods.UnregisterHotKey(_globalHotKeyHwnd, _globalHotKeyId);
+                    _usingGlobalHotKey = false;
+                    Log.Info("Unregistering previous global hotkey", GetType());
+                }
+
+                if (_hotkeyHandle != 0)
+                {
+                    HotkeyManager?.UnregisterHotkey(_hotkeyHandle);
+                    _hotkeyHandle = 0;
+                    Log.Info("Unregistering previous low level key handler", GetType());
+                }
+
+                if (_settings.StartedFromPowerToysRunner && _settings.UseCentralizedKeyboardHook)
+                {
+                    Log.Info("Using the Centralized Keyboard Hook for the HotKey.", GetType());
+                }
+                else
+                {
+                    _globalHotKeyVK = hotkey.Key;
+                    _globalHotKeyFSModifiers = VKModifiersFromHotKey(hotkey);
+                    if (NativeMethods.RegisterHotKey(hwnd, _globalHotKeyId, _globalHotKeyFSModifiers, _globalHotKeyVK))
+                    {
+                        // Using global hotkey registered through the native RegisterHotKey method.
+                        _globalHotKeyHwnd = hwnd;
+                        _usingGlobalHotKey = true;
+                        Log.Info("Registered global hotkey", GetType());
+                        return;
+                    }
+
+                    Log.Warn("Registering global shortcut failed. Will use low-level keyboard hook instead.", GetType());
+
+                    // Using fallback low-level keyboard hook through HotkeyManager.
+                    if (HotkeyManager == null)
+                    {
+                        HotkeyManager = new HotkeyManager();
+                    }
+
+                    _hotkeyHandle = HotkeyManager.RegisterHotkey(hotkey, action);
+                }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception)
@@ -748,6 +807,11 @@ namespace PowerLauncher.ViewModel
             return false;
         }
 
+        /* TODO: Custom Hotkeys for Plugins. Commented since this is an incomplete feature.
+         * This needs:
+         *  - Support for use with global shortcut.
+         *  - Support for use with the fallback Shortcut Manager.
+         *  - Support for use through the runner centralized keyboard hooks.
         private void SetCustomPluginHotkey()
         {
             if (_settings.CustomPluginHotkeys == null)
@@ -767,6 +831,15 @@ namespace PowerLauncher.ViewModel
                     MainWindowVisibility = Visibility.Visible;
                     ChangeQueryText(hotkey.ActionKeyword);
                 });
+            }
+        }
+        */
+
+        private void OnCentralizedKeyboardHookHotKey()
+        {
+            if (_settings.StartedFromPowerToysRunner && _settings.UseCentralizedKeyboardHook)
+            {
+                OnHotkey();
             }
         }
 
@@ -805,7 +878,7 @@ namespace PowerLauncher.ViewModel
             });
         }
 
-        private void ToggleWox()
+        public void ToggleWox()
         {
             if (MainWindowVisibility != Visibility.Visible)
             {
@@ -813,7 +886,30 @@ namespace PowerLauncher.ViewModel
             }
             else
             {
-                MainWindowVisibility = Visibility.Collapsed;
+                if (_settings.ClearInputOnLaunch)
+                {
+                    ClearQueryCommand.Execute(null);
+                    Task.Run(() =>
+                    {
+                        Thread.Sleep(100);
+                        Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                        {
+                            MainWindowVisibility = Visibility.Collapsed;
+                        }));
+                    });
+                }
+                else
+                {
+                    MainWindowVisibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        public void Hide()
+        {
+            if (MainWindowVisibility != Visibility.Collapsed)
+            {
+                ToggleWox();
             }
         }
 
@@ -867,7 +963,6 @@ namespace PowerLauncher.ViewModel
             list.Add(r);
             Results.AddResults(list, _updateToken);
             Results.Clear();
-            MainWindowVisibility = System.Windows.Visibility.Collapsed;
 
             // Fix Cold start for plugins, "m" is just a random string needed to query results
             var pluginQueryPairs = QueryBuilder.Build("m");
@@ -924,7 +1019,7 @@ namespace PowerLauncher.ViewModel
                     if (input.IndexOf(query, StringComparison.OrdinalIgnoreCase) == 0)
                     {
                         // Use the same case as the input query for the matched portion of the string
-                        return query + input.Substring(query.Length);
+                        return string.Concat(query, input.AsSpan(query.Length));
                     }
                 }
             }
@@ -941,7 +1036,7 @@ namespace PowerLauncher.ViewModel
                     // Using OrdinalIgnoreCase since this is internal
                     if (input.IndexOf(query, StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        return query + input.Substring(query.Length);
+                        return string.Concat(query, input.AsSpan(query.Length));
                     }
                 }
 
@@ -971,6 +1066,12 @@ namespace PowerLauncher.ViewModel
             {
                 if (disposing)
                 {
+                    if (_usingGlobalHotKey)
+                    {
+                        NativeMethods.UnregisterHotKey(_globalHotKeyHwnd, _globalHotKeyId);
+                        _usingGlobalHotKey = false;
+                    }
+
                     if (_hotkeyHandle != 0)
                     {
                         HotkeyManager?.UnregisterHotkey(_hotkeyHandle);

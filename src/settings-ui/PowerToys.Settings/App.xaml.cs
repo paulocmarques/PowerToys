@@ -18,11 +18,19 @@ namespace PowerToys.Settings
 
         public bool ShowOobe { get; set; }
 
+        public bool ShowScoobe { get; set; }
+
+        public Type StartupPage { get; set; } = typeof(Microsoft.PowerToys.Settings.UI.Views.GeneralPage);
+
         public void OpenSettingsWindow(Type type)
         {
             if (settingsWindow == null)
             {
                 settingsWindow = new MainWindow();
+            }
+            else if (settingsWindow.WindowState == WindowState.Minimized)
+            {
+                settingsWindow.WindowState = WindowState.Normal;
             }
 
             settingsWindow.Show();
@@ -33,40 +41,36 @@ namespace PowerToys.Settings
         {
             settingsWindow = new MainWindow();
 
-            // To avoid visual flickering, show the window with a size of 0,0
-            // and don't show it in the taskbar
-            var originalHight = settingsWindow.Height;
-            var originalWidth = settingsWindow.Width;
-            settingsWindow.Height = 0;
-            settingsWindow.Width = 0;
-            settingsWindow.ShowInTaskbar = false;
-
-            settingsWindow.Show();
-            settingsWindow.Hide();
-
-            settingsWindow.Height = originalHight;
-            settingsWindow.Width = originalWidth;
-            settingsWindow.ShowInTaskbar = true;
+            Utils.ShowHide(settingsWindow);
+            Utils.CenterToScreen(settingsWindow);
         }
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            if (!ShowOobe)
+            if (!ShowOobe && !ShowScoobe)
             {
                 settingsWindow = new MainWindow();
                 settingsWindow.Show();
+                settingsWindow.NavigateToSection(StartupPage);
             }
             else
             {
-                PowerToysTelemetry.Log.WriteEvent(new OobeStartedEvent());
-
                 // Create the Settings window so that it's fully initialized and
                 // it will be ready to receive the notification if the user opens
                 // the Settings from the tray icon.
                 InitHiddenSettingsWindow();
-
-                OobeWindow oobeWindow = new OobeWindow();
-                oobeWindow.Show();
+                if (ShowOobe)
+                {
+                    PowerToysTelemetry.Log.WriteEvent(new OobeStartedEvent());
+                    OobeWindow oobeWindow = new OobeWindow(Microsoft.PowerToys.Settings.UI.OOBE.Enums.PowerToysModulesEnum.Overview);
+                    oobeWindow.Show();
+                }
+                else if (ShowScoobe)
+                {
+                    PowerToysTelemetry.Log.WriteEvent(new ScoobeStartedEvent());
+                    OobeWindow scoobeWindow = new OobeWindow(Microsoft.PowerToys.Settings.UI.OOBE.Enums.PowerToysModulesEnum.WhatsNew);
+                    scoobeWindow.Show();
+                }
             }
         }
     }

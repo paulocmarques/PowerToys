@@ -7,12 +7,20 @@ steps:
   submodules: true
   clean: true
 
-- task: NuGetToolInstaller@0
-  displayName: Ensure NuGet 5.8.0
+- task: UseDotNet@2
+  displayName: 'Use .NET 3.1 for unit test SDK'
   inputs:
-    versionSpec: 5.8.0
+    packageType: sdk
+    version: '3.1.x'
 
-#- template: .\..\..\..\restore-dependencies.yml
+- task: UseDotNet@2
+  displayName: 'Use .NET 6 SDK'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+
+- task: NuGetToolInstaller@1
+  displayName: Ensure NuGet Installer
 
 - task: VisualStudioTestPlatformInstaller@1
   displayName: Ensure VSTest Platform
@@ -30,7 +38,7 @@ steps:
   displayName: 'Build PowerToys.sln'
   inputs:
     solution: '**\PowerToys.sln'
-    vsVersion: 16.0
+    vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
     msbuildArgs: ${{ parameters.additionalBuildArguments }}
@@ -49,7 +57,26 @@ steps:
   displayName: 'Build BugReportTool.sln'
   inputs:
     solution: '**\BugReportTool.sln'
-    vsVersion: 16.0
+    vsVersion: 17.0
+    platform: '$(BuildPlatform)'
+    configuration: '$(BuildConfiguration)'
+    msbuildArgs: ${{ parameters.additionalBuildArguments }}
+    maximumCpuCount: true
+
+- task: NuGetCommand@2
+  displayName: Restore NuGet packages for WebcamReportTool.sln
+  inputs:
+    command: restore
+    feedsToUse: config
+    configPath: NuGet.config
+    restoreSolution: tools\WebcamReportTool\WebcamReportTool.sln
+    restoreDirectory: '$(Build.SourcesDirectory)\tools\WebcamReportTool\packages'
+
+- task: VSBuild@1
+  displayName: 'Build WebcamReportTool.sln'
+  inputs:
+    solution: '**\WebcamReportTool.sln'
+    vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
     msbuildArgs: ${{ parameters.additionalBuildArguments }}
@@ -68,71 +95,58 @@ steps:
   displayName: 'Build PowerToysSetup.sln'
   inputs:
     solution: '**\installer\PowerToysSetup.sln'
-    vsVersion: 16.0
+    vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
     msbuildArgs: ${{ parameters.additionalBuildArguments }}
     maximumCpuCount: true
-
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for PowerToysBootstrapper.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: installer\PowerToysBootstrapper\PowerToysBootstrapper.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\installer\PowerToysBootstrapper\packages'
-
-- task: VSBuild@1
-  displayName: 'Build PowerToysBootstrapper.sln'
-  inputs:
-    solution: '**\installer\PowerToysBootstrapper\PowerToysBootstrapper.sln'
-    vsVersion: 16.0
-    platform: '$(BuildPlatform)'
-    configuration: '$(BuildConfiguration)'
-    msbuildArgs: ${{ parameters.additionalBuildArguments }}
-    maximumCpuCount: true
-
 
 # directly not doing WinAppDriver testing
 - task: VSTest@2
-  displayName: 'Run .Net Core Tests 1'
+  displayName: 'MS Tests'
   inputs:
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
     testSelector: 'testAssemblies'
     testAssemblyVer2: |
-      **\Microsoft.Plugin.Folder.UnitTest.dll
+      **\UnitTests-GcodeThumbnailProvider.dll
+      **\UnitTests-SvgThumbnailProvider.dll
+      **\UnitTests-StlThumbnailProvider.dll
+      **\UnitTests-PdfThumbnailProvider.dll
+      **\Settings.UI.UnitTests.dll
+      **\UnitTests-MarkdownPreviewHandler.dll
+      **\UnitTests-GcodePreviewHandler.dll
+      **\UnitTests-PdfPreviewHandler.dll
+      **\UnitTests-SvgPreviewHandler.dll
+      **\UnitTests-PreviewHandlerCommon.dll
+      **\PreviewPaneUnitTests.dll
+      **\Microsoft.PowerToys.Run.Plugin.Registry.UnitTests.dll
+      **\UnitTest-ColorPickerUI.dll
+      **\Microsoft.Interop.Tests.dll
+      **\ImageResizer.Test.dll
+      **\Community.PowerToys.Run.Plugin.UnitConverter.UnitTest.dll
+      **\Microsoft.Plugin.Folder.UnitTests.dll
       **\Microsoft.Plugin.Program.UnitTests.dll
       **\Microsoft.PowerToys.Run.Plugin.Calculator.UnitTest.dll
       **\Microsoft.Plugin.Uri.UnitTests.dll
       **\Wox.Test.dll
-      **\Microsoft.PowerToys.Settings.UI.UnitTests.dll
-      **\UnitTest-ColorPickerUI.dll
-      **\Microsoft.Interop.Tests.dll
+      **\Microsoft.PowerToys.Run.Plugin.System.UnitTests.dll     
+      **\Microsoft.Plugin.WindowsTerminal.UnitTests.dll
+      **\Microsoft.Plugin.WindowWalker.UnitTests.dll
       !**\obj\**
-- task: VSTest@2
-  displayName: 'Run .Net Core Tests 2'
-  inputs:
-    platform: '$(BuildPlatform)'
-    configuration: '$(BuildConfiguration)'
-    testSelector: 'testAssemblies'
-    testAssemblyVer2: |
-      **\PreviewPaneUnitTests.dll #this is the markdown tests
-      **\UnitTests-PreviewHandlerCommon.dll
-      **\UnitTests-SvgPreviewHandler.dll
-      **\ImageResizer.Test.dll
-      **\powerpreviewTest.dll
-      !**\obj\**
+      !**\ref\**
+
 # Native dlls
 - task: VSTest@2
-  displayName: 'Run Native Tests'
+  displayName: 'Native Tests'
   inputs:
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
     testSelector: 'testAssemblies'
     testAssemblyVer2: |
-      **\KeyboardManagerTest.dll
+      **\KeyboardManagerEngineTest.dll
+      **\KeyboardManagerEditorTest.dll
       **\UnitTests-CommonLib.dll
       **\PowerRenameUnitTests.dll
+      **\powerpreviewTest.dll
       !**\obj\**

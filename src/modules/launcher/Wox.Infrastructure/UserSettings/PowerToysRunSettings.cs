@@ -1,13 +1,12 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.ObjectModel;
 using System.Drawing;
+using System.Text.Json.Serialization;
 using ManagedCommon;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Wox.Plugin;
 
 namespace Wox.Infrastructure.UserSettings
@@ -43,9 +42,30 @@ namespace Wox.Infrastructure.UserSettings
             }
         }
 
+        private bool _useCentralizedKeyboardHook;
+
+        public bool UseCentralizedKeyboardHook
+        {
+            get
+            {
+                return _useCentralizedKeyboardHook;
+            }
+
+            set
+            {
+                if (_useCentralizedKeyboardHook != value)
+                {
+                    _useCentralizedKeyboardHook = value;
+                    OnPropertyChanged(nameof(UseCentralizedKeyboardHook));
+                }
+            }
+        }
+
         public string Language { get; set; } = "en";
 
         public Theme Theme { get; set; } = Theme.System;
+
+        public StartupPosition StartupPosition { get; set; } = StartupPosition.Cursor;
 
         public string QueryBoxFont { get; set; } = FontFamily.GenericSansSerif.Name;
 
@@ -171,11 +191,11 @@ namespace Wox.Infrastructure.UserSettings
 
         public bool IgnoreHotkeysOnFullscreen { get; set; }
 
-        public bool UsePowerToysRunnerKeyboardHook { get; set; }
+        public bool StartedFromPowerToysRunner { get; set; }
 
         public HttpProxy Proxy { get; set; } = new HttpProxy();
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public LastQueryMode LastQueryMode { get; set; } = LastQueryMode.Selected;
     }
 

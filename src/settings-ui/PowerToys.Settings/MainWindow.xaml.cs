@@ -3,12 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.ComponentModel;
+using System.Drawing;
 using System.Windows;
+using System.Windows.Interop;
 using Microsoft.PowerLauncher.Telemetry;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 using Microsoft.PowerToys.Settings.UI.Views;
 using Microsoft.PowerToys.Telemetry;
 using Microsoft.Toolkit.Wpf.UI.XamlHost;
+using PowerToys.Settings.Helpers;
+using Windows.ApplicationModel.Resources;
 using Windows.Data.Json;
 
 namespace PowerToys.Settings
@@ -26,6 +31,12 @@ namespace PowerToys.Settings
             bootTime.Start();
 
             this.InitializeComponent();
+
+            Utils.FitToScreen(this);
+
+            ResourceLoader loader = ResourceLoader.GetForViewIndependentUse();
+            Title = loader.GetString("SettingsWindow_Title");
+
             bootTime.Stop();
 
             PowerToysTelemetry.Log.WriteEvent(new SettingsBootEvent() { BootTimeMs = bootTime.ElapsedMilliseconds });
@@ -46,6 +57,34 @@ namespace PowerToys.Settings
                 Activate();
                 ShellPage.Navigate(type);
             }
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var handle = new WindowInteropHelper(this).Handle;
+            NativeMethods.GetWindowPlacement(handle, out var startupPlacement);
+            var placement = Utils.DeserializePlacementOrDefault(handle);
+            NativeMethods.SetWindowPlacement(handle, ref placement);
+
+            var windowRect = new Rectangle((int)Left, (int)Top, (int)Width, (int)Height);
+            var screenRect = new Rectangle((int)SystemParameters.VirtualScreenLeft, (int)SystemParameters.VirtualScreenTop, (int)SystemParameters.VirtualScreenWidth, (int)SystemParameters.VirtualScreenHeight);
+            var intersection = Rectangle.Intersect(windowRect, screenRect);
+
+            // Restore default position if 5% of width or height of the window is offscreen
+            if (intersection.Width < (Width * 0.95) || intersection.Height < (Height * 0.95))
+            {
+                NativeMethods.SetWindowPlacement(handle, ref startupPlacement);
+            }
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            var handle = new WindowInteropHelper(this).Handle;
+
+            Utils.SerializePlacement(handle);
         }
 
         private void WindowsXamlHost_ChildChanged(object sender, EventArgs e)
@@ -72,20 +111,21 @@ namespace PowerToys.Settings
                 // send IPC Message
                 ShellPage.SetRestartAdminSndMessageCallback(msg =>
                 {
-                    Program.GetTwoWayIPCManager().Send(msg);
+                    Program.GetTwoWayIPCManager()?.Send(msg);
+                    isOpen = false;
                     System.Windows.Application.Current.Shutdown(); // close application
                 });
 
                 // send IPC Message
                 ShellPage.SetCheckForUpdatesMessageCallback(msg =>
                 {
-                    Program.GetTwoWayIPCManager().Send(msg);
+                    Program.GetTwoWayIPCManager()?.Send(msg);
                 });
 
                 // open oobe
                 ShellPage.SetOpenOobeCallback(() =>
                 {
-                    var oobe = new OobeWindow();
+                    var oobe = new OobeWindow(Microsoft.PowerToys.Settings.UI.OOBE.Enums.PowerToysModulesEnum.Overview);
                     oobe.Show();
                 });
 
@@ -117,7 +157,13 @@ namespace PowerToys.Settings
             // XAML Islands: If the window is open, explicitly force it to be shown to solve the blank dialog issue https://github.com/microsoft/PowerToys/issues/3384
             if (isOpen)
             {
-                Show();
+                try
+                {
+                    Show();
+                }
+                catch (InvalidOperationException)
+                {
+                }
             }
         }
 

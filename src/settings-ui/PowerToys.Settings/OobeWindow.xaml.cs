@@ -4,10 +4,13 @@
 
 using System;
 using System.Windows;
+using System.Windows.Interop;
 using interop;
 using Microsoft.PowerToys.Settings.UI.Helpers;
+using Microsoft.PowerToys.Settings.UI.OOBE.Enums;
 using Microsoft.PowerToys.Settings.UI.OOBE.Views;
 using Microsoft.Toolkit.Wpf.UI.XamlHost;
+using Windows.ApplicationModel.Resources;
 
 namespace PowerToys.Settings
 {
@@ -18,6 +21,7 @@ namespace PowerToys.Settings
     {
         private static Window inst;
         private OobeShellPage shellPage;
+        private PowerToysModulesEnum initialModule;
 
         public static bool IsOpened
         {
@@ -27,9 +31,14 @@ namespace PowerToys.Settings
             }
         }
 
-        public OobeWindow()
+        public OobeWindow(PowerToysModulesEnum initialModule)
         {
             InitializeComponent();
+            Utils.FitToScreen(this);
+            this.initialModule = initialModule;
+
+            ResourceLoader loader = ResourceLoader.GetForViewIndependentUse();
+            Title = loader.GetString("OobeWindow_Title");
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -63,6 +72,11 @@ namespace PowerToys.Settings
             WindowsXamlHost windowsXamlHost = sender as WindowsXamlHost;
             shellPage = windowsXamlHost.GetUwpInternalObject() as OobeShellPage;
 
+            if (shellPage != null)
+            {
+                shellPage.NavigateToModule(initialModule);
+            }
+
             OobeShellPage.SetRunSharedEventCallback(() =>
             {
                 return Constants.PowerLauncherSharedEvent();
@@ -73,16 +87,17 @@ namespace PowerToys.Settings
                 return Constants.ShowColorPickerSharedEvent();
             });
 
-            OobeShellPage.SetShortcutGuideSharedEventCallback(() =>
-            {
-                NativeMethods.AllowSetForegroundWindow(PowerToys.Settings.Program.PowerToysPID);
-                return Constants.ShowShortcutGuideSharedEvent();
-            });
-
             OobeShellPage.SetOpenMainWindowCallback((Type type) =>
             {
                 ((App)Application.Current).OpenSettingsWindow(type);
             });
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var hwnd = new WindowInteropHelper(this).Handle;
+            NativeMethods.SetPopupStyle(hwnd);
         }
     }
 }

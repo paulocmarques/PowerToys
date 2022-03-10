@@ -45,7 +45,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator.Properties {
                 return resourceMan;
             }
         }
-        
+
         /// <summary>
         ///   Overrides the current thread's CurrentUICulture property for all
         ///   resource lookups using this strongly typed resource class.
@@ -68,7 +68,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator.Properties {
                 return ResourceManager.GetString("wox_plugin_calculator_copy_failed", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   Looks up a localized string similar to Copy this number to the clipboard.
         /// </summary>
@@ -95,6 +95,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator.Properties {
                 return ResourceManager.GetString("wox_plugin_calculator_not_a_number", resourceCulture);
             }
         }
+
         
         /// <summary>
         ///   Looks up a localized string similar to Does mathematical calculations (e.g. 5*3-2)..
@@ -104,7 +105,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator.Properties {
                 return ResourceManager.GetString("wox_plugin_calculator_plugin_description", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   Looks up a localized string similar to Calculator.
         /// </summary>

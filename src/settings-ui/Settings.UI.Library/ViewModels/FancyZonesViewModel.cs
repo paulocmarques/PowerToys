@@ -6,6 +6,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 using Microsoft.PowerToys.Settings.UI.Library.ViewModels.Commands;
 
 namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
@@ -25,6 +26,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
         private Func<string, int> SendConfigMSG { get; }
 
         private string settingsConfigFileFolder = string.Empty;
+
+        private bool _windows11;
 
         private enum MoveWindowBehaviour
         {
@@ -86,6 +89,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
             _makeDraggedWindowTransparent = Settings.Properties.FancyzonesMakeDraggedWindowTransparent.Value;
             _allowPopupWindowSnap = Settings.Properties.FancyzonesAllowPopupWindowSnap.Value;
             _allowChildWindowSnap = Settings.Properties.FancyzonesAllowChildWindowSnap.Value;
+            _disableRoundCornersOnSnap = Settings.Properties.FancyzonesDisableRoundCornersOnSnap.Value;
             _highlightOpacity = Settings.Properties.FancyzonesHighlightOpacity.Value;
             _excludedApps = Settings.Properties.FancyzonesExcludedApps.Value;
             _systemTheme = Settings.Properties.FancyzonesSystemTheme.Value;
@@ -111,6 +115,13 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
             _zoneNumberColor = !string.IsNullOrEmpty(numberColor) ? numberColor : ConfigDefaults.DefaultFancyzonesNumberColor;
 
             _isEnabled = GeneralSettingsConfig.Enabled.FancyZones;
+            _windows11 = Helper.Windows11();
+
+            // Disable setting on windows 10
+            if (!_windows11 && DisableRoundCornersOnWindowSnap)
+            {
+                DisableRoundCornersOnWindowSnap = false;
+            }
         }
 
         private bool _isEnabled;
@@ -135,6 +146,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
         private bool _showZoneNumber;
         private bool _allowPopupWindowSnap;
         private bool _allowChildWindowSnap;
+        private bool _disableRoundCornersOnSnap;
 
         private int _highlightOpacity;
         private string _excludedApps;
@@ -602,6 +614,24 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
             }
         }
 
+        public bool DisableRoundCornersOnWindowSnap
+        {
+            get
+            {
+                return _disableRoundCornersOnSnap;
+            }
+
+            set
+            {
+                if (_disableRoundCornersOnSnap != value)
+                {
+                    _disableRoundCornersOnSnap = value;
+                    Settings.Properties.FancyzonesDisableRoundCornersOnSnap.Value = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         // For the following setters we use OrdinalIgnoreCase string comparison since
         // we expect value to be a hex code.
         public string ZoneHighlightColor
@@ -825,6 +855,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library.ViewModels
                 }
             }
         }
+
+        public bool Windows11 => _windows11;
 
         private void LaunchEditor()
         {

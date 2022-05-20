@@ -17,6 +17,7 @@
                 "PowerToys.Interop.dll",
                 "BugReportTool\\PowerToys.BugReportTool.exe",
                 "WebcamReportTool\\PowerToys.WebcamReportTool.exe",
+                "StylesReportTool\\PowerToys.StylesReportTool.exe",
                 "Telemetry.dll",
                 "PowerToys.ManagedTelemetry.dll",
                 "PowerToys.ManagedCommon.dll",
@@ -94,6 +95,7 @@
                 "modules\\launcher\\Plugins\\VSCodeWorkspaces\\Community.PowerToys.Run.Plugin.VSCodeWorkspaces.dll",
                 "modules\\launcher\\Plugins\\Service\\Microsoft.PowerToys.Run.Plugin.Service.dll",
                 "modules\\launcher\\Plugins\\System\\Microsoft.PowerToys.Run.Plugin.System.dll",
+                "modules\\launcher\\Plugins\\TimeDate\\Microsoft.PowerToys.Run.Plugin.TimeDate.dll",
                 "modules\\launcher\\Plugins\\TimeZone\\Microsoft.PowerToys.Run.Plugin.TimeZone.dll",
                 "modules\\launcher\\Plugins\\WebSearch\\Community.PowerToys.Run.Plugin.WebSearch.dll",
                 "modules\\launcher\\Plugins\\WindowsTerminal\\Microsoft.PowerToys.Run.Plugin.WindowsTerminal.dll",
@@ -103,7 +105,6 @@
                 "modules\\MouseUtils\\PowerToys.MousePointerCrosshairs.dll",
 
                 "modules\\PowerRename\\PowerToys.PowerRenameExt.dll",
-                "modules\\PowerRename\\PowerToys.PowerRenameUILib.dll",
                 "modules\\PowerRename\\PowerToys.PowerRename.exe",
 
                 "modules\\ShortcutGuide\\ShortcutGuide\\PowerToys.ShortcutGuide.exe",
@@ -112,8 +113,8 @@
                 "modules\\VideoConference\\PowerToys.VideoConferenceModule.dll",
                 "modules\\VideoConference\\PowerToys.VideoConferenceProxyFilter_x86.dll",
                 "modules\\VideoConference\\PowerToys.VideoConferenceProxyFilter_x64.dll",
+                "modules\\VideoConference\\PowerToys.VideoConferenceProxyFilter_arm64.dll",
 
-                "Settings\\PowerToys.Settings.UI.exe",
                 "Settings\\PowerToys.Settings.dll",
                 "Settings\\PowerToys.Settings.exe"
             ],
@@ -186,11 +187,12 @@
                 "modules\\FileExplorerPreview\\Microsoft.Web.WebView2.Core.dll",
                 "modules\\FileExplorerPreview\\Microsoft.Web.WebView2.WinForms.dll",
                 "modules\\FileExplorerPreview\\Microsoft.Web.WebView2.Wpf.dll",
-                "modules\\FileExplorerPreview\\runtimes\\win-x64\\native\\WebView2Loader.dll",
+                "modules\\FileExplorerPreview\\WebView2Loader.dll",
                 "modules\\launcher\\e_sqlite3.dll",
                 "modules\\launcher\\SQLitePCLRaw.batteries_v2.dll",
                 "modules\\launcher\\SQLitePCLRaw.core.dll",
                 "modules\\launcher\\SQLitePCLRaw.provider.e_sqlite3.dll",
+                "Settings\\Microsoft.Graphics.Canvas.Interop.dll",
                 "ColorCode.Core.dll", 
                 "ColorCode.UWP.dll",
                 "UnitsNet.dll"

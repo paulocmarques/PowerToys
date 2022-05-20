@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls"
-    xmlns:converters="using:Microsoft.Toolkit.Uwp.UI.Converters"     
+    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"     
     mc:Ignorable="d"
     AutomationProperties.LandmarkType="Main">
 
@@ -14,6 +14,7 @@
         <converters:BoolToObjectConverter x:Key="BoolToComboBoxIndexConverter" TrueValue="1" FalseValue="0"/>
         <converters:StringFormatConverter x:Key="StringFormatConverter"/>
         <converters:BoolToVisibilityConverter x:Key="FalseToVisibleConverter" TrueValue="Collapsed" FalseValue="Visible"/>
+        <converters:BoolToVisibilityConverter x:Key="TrueToVisibleConverter" TrueValue="Visible" FalseValue="Collapsed"/>
     </Page.Resources>
 
     <controls:SettingsPageControl x:Uid="FancyZones"
@@ -189,6 +190,8 @@
                                                                  x:Uid="FancyZones_AllowPopupWindowSnap"/>
                                 <Rectangle Style="{StaticResource ExpanderSeparatorStyle}" />
                                 <CheckBox x:Uid="FancyZones_AllowChildWindowSnap" IsChecked="{x:Bind Mode=TwoWay, Path=ViewModel.AllowChildWindowSnap}" Margin="{StaticResource ExpanderSettingMargin}"/>
+                                <Rectangle Style="{StaticResource ExpanderSeparatorStyle}" Visibility="{x:Bind Mode=OneWay, Path=ViewModel.Windows11, Converter={StaticResource TrueToVisibleConverter}}"/>
+                                <CheckBox x:Uid="FancyZones_DisableRoundCornersOnWindowSnap" IsChecked="{x:Bind Mode=TwoWay, Path=ViewModel.DisableRoundCornersOnWindowSnap}" Margin="{StaticResource ExpanderSettingMargin}" Visibility="{x:Bind Mode=OneWay, Path=ViewModel.Windows11, Converter={StaticResource TrueToVisibleConverter}}"/>
                             </StackPanel>
 
                         </controls:SettingExpander.Content>

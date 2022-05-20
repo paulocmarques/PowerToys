@@ -10,6 +10,7 @@
 #include "FancyZonesData/AppZoneHistory.h"
 #include "Settings.h"
 #include "WorkArea.h"
+#include <FancyZonesLib/FancyZonesWindowProcessing.h>
 #include <FancyZonesLib/WindowUtils.h>
 
 // Non-Localizable strings
@@ -60,6 +61,11 @@ WindowMoveHandler::WindowMoveHandler(const std::function<void()>& keyUpdateCallb
 
 void WindowMoveHandler::MoveSizeStart(HWND window, HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IWorkArea>>& workAreaMap) noexcept
 {
+    if (!FancyZonesWindowProcessing::IsProcessable(window))
+    {
+        return;
+    }
+
     if (!FancyZonesWindowUtils::IsCandidateForZoning(window) || WindowMoveHandlerUtils::IsCursorTypeIndicatingSizeEvent())
     {
         return;
@@ -247,6 +253,8 @@ void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const st
             }
         }
 
+        FancyZonesWindowUtils::ResetRoundCornersPreference(window);
+
         auto monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONULL);
         if (monitor)
         {
@@ -354,9 +362,15 @@ void WindowMoveHandler::SetWindowTransparency(HWND window) noexcept
                       GWL_EXSTYLE,
                       m_windowTransparencyProperties.draggedWindowExstyle | WS_EX_LAYERED);
 
-        GetLayeredWindowAttributes(window, &m_windowTransparencyProperties.draggedWindowCrKey, &m_windowTransparencyProperties.draggedWindowInitialAlpha, &m_windowTransparencyProperties.draggedWindowDwFlags);
+        if (!GetLayeredWindowAttributes(window, &m_windowTransparencyProperties.draggedWindowCrKey, &m_windowTransparencyProperties.draggedWindowInitialAlpha, &m_windowTransparencyProperties.draggedWindowDwFlags))
+        {
+            Logger::error(L"SetWindowTransparency: GetLayeredWindowAttributes failed, {}", get_last_error_or_default(GetLastError()));
+        }
 
-        SetLayeredWindowAttributes(window, 0, (255 * 50) / 100, LWA_ALPHA);
+        if (!SetLayeredWindowAttributes(window, 0, (255 * 50) / 100, LWA_ALPHA))
+        {
+            Logger::error(L"SetWindowTransparency: SetLayeredWindowAttributes failed, {}", get_last_error_or_default(GetLastError()));
+        }
     }
 }
 
@@ -364,8 +378,16 @@ void WindowMoveHandler::ResetWindowTransparency() noexcept
 {
     if (FancyZonesSettings::settings().makeDraggedWindowTransparent && m_windowTransparencyProperties.draggedWindow != nullptr)
     {
-        SetLayeredWindowAttributes(m_windowTransparencyProperties.draggedWindow, m_windowTransparencyProperties.draggedWindowCrKey, m_windowTransparencyProperties.draggedWindowInitialAlpha, m_windowTransparencyProperties.draggedWindowDwFlags);
-        SetWindowLong(m_windowTransparencyProperties.draggedWindow, GWL_EXSTYLE, m_windowTransparencyProperties.draggedWindowExstyle);
+        if (!SetLayeredWindowAttributes(m_windowTransparencyProperties.draggedWindow, m_windowTransparencyProperties.draggedWindowCrKey, m_windowTransparencyProperties.draggedWindowInitialAlpha, m_windowTransparencyProperties.draggedWindowDwFlags))
+        {
+            Logger::error(L"ResetWindowTransparency: SetLayeredWindowAttributes failed");
+        }
+        
+        if (SetWindowLong(m_windowTransparencyProperties.draggedWindow, GWL_EXSTYLE, m_windowTransparencyProperties.draggedWindowExstyle) == 0)
+        {
+            Logger::error(L"ResetWindowTransparency: SetWindowLong failed, {}", get_last_error_or_default(GetLastError()));
+        }
+
         m_windowTransparencyProperties.draggedWindow = nullptr;
     }
 }

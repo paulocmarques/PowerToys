@@ -145,7 +145,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Registry.Helper
             Win32.Registry.SetValue(@"HKEY_Current_User\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit", "LastKey", fullKey);
 
             // -m => allow multi-instance (hidden start option)
-            Wox.Infrastructure.Helper.OpenInShell("regedit.exe", "-m", null, true);
+            Wox.Infrastructure.Helper.OpenInShell("regedit.exe", "-m", null, Wox.Infrastructure.Helper.ShellRunAsType.Administrator);
         }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Registry.Helper
                         continue;
                     }
 
-                    if (string.Equals(subKey, searchSubKey, StringComparison.InvariantCultureIgnoreCase))
+                    if (string.Equals(subKey, searchSubKey, StringComparison.OrdinalIgnoreCase))
                     {
                         var key = parentKey.OpenSubKey(subKey, RegistryKeyPermissionCheck.ReadSubTree);
                         if (key != null)

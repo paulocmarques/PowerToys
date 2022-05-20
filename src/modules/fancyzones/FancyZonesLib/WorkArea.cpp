@@ -44,7 +44,6 @@ namespace
 
         HWND ExtractWindow()
         {
-            _TRACER_;
             std::unique_lock lock(m_mutex);
 
             if (m_pool.empty())
@@ -84,7 +83,6 @@ namespace
 
         void FreeZonesOverlayWindow(HWND window)
         {
-            _TRACER_;
             Logger::info("Freeing ZonesOverlay window into pool, hWnd = {}", (void*)window);
             SetWindowLongPtrW(window, GWLP_USERDATA, 0);
             ShowWindow(window, SW_HIDE);
@@ -196,6 +194,7 @@ bool WorkArea::Init(HINSTANCE hinstance, HMONITOR monitor, const FancyZonesDataT
         mi.cbSize = sizeof(mi);
         if (!GetMonitorInfoW(monitor, &mi))
         {
+            Logger::error(L"GetMonitorInfo failed on work area initialization");
             return false;
         }
         workAreaRect = Rect(mi.rcWork);
@@ -212,6 +211,7 @@ bool WorkArea::Init(HINSTANCE hinstance, HMONITOR monitor, const FancyZonesDataT
 
     if (!m_window)
     {
+        Logger::error(L"No work area window");
         return false;
     }
 
@@ -388,7 +388,16 @@ WorkArea::GetWindowZoneIndexes(HWND window) const noexcept
         {
             return AppZoneHistory::instance().GetAppLastZoneIndexSet(window, m_uniqueId, zoneSetId.get());
         }
+        else
+        {
+            Logger::error(L"Failed to convert to string layout GUID on the requested work area");
+        }
     }
+    else
+    {
+        Logger::error(L"No layout initialized on the requested work area");
+    }
+
     return {};
 }
 
@@ -418,8 +427,14 @@ WorkArea::HideZonesOverlay() noexcept
 IFACEMETHODIMP_(void)
 WorkArea::UpdateActiveZoneSet() noexcept
 {
+    bool isLayoutAlreadyApplied = AppliedLayouts::instance().IsLayoutApplied(m_uniqueId);
+    if (!isLayoutAlreadyApplied)
+    {
+        AppliedLayouts::instance().ApplyDefaultLayout(m_uniqueId);
+    }
+
     CalculateZoneSet(FancyZonesSettings::settings().overlappingZonesAlgorithm);
-    if (m_window)
+    if (m_window && m_zoneSet)
     {
         m_highlightZone.clear();
         m_zonesOverlay->DrawActiveZoneSet(m_zoneSet->GetZones(), m_highlightZone, Colors::GetZoneColors(), FancyZonesSettings::settings().showZoneNumber);
@@ -508,6 +523,7 @@ void WorkArea::CalculateZoneSet(OverlappingZonesAlgorithm overlappingAlgorithm) 
         }
         else
         {
+            Logger::error(L"CalculateZoneSet: GetMonitorInfo failed");
             return;
         }
     }

@@ -109,7 +109,7 @@ void handle_tray_command(HWND window, const WPARAM command_id, LPARAM lparam)
 
     case ID_DOCUMENTATION_MENU_COMMAND:
     {
-        RunNonElevatedEx(L"https://aka.ms/PowerToysOverview", L"");
+        RunNonElevatedEx(L"https://aka.ms/PowerToysOverview", L"", L"");
         break;
     }
         
@@ -168,7 +168,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         {
             switch (lparam)
             {
-            case WM_LBUTTONUP:
+            case WM_LBUTTONDBLCLK:
             {
                 open_settings_window(std::nullopt);
                 break;

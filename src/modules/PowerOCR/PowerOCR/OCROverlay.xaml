@@ -5,9 +5,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:PowerOCR"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="PowerOCR"
+    Title="TextExtractor"
     Width="800"
     Height="450"
+    ShowActivated="False"
+    ShowInTaskbar="False"
     AllowsTransparency="True"
     Background="Transparent"
     Loaded="Window_Loaded"
@@ -43,12 +45,7 @@
                     Color="Black" />
             </Canvas.Background>
             <Canvas.ContextMenu>
-                <ContextMenu>
-                    <MenuItem
-                        Name="CancelMenuItem"
-                        Click="CancelMenuItem_Click"
-                        Header="Cancel" />
-                </ContextMenu>
+                <ContextMenu x:Name="CanvasContextMenu" />
             </Canvas.ContextMenu>
         </Canvas>
     </Grid>

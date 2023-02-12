@@ -152,29 +152,27 @@ LRESULT Toolbar::WindowProcessMessages(HWND hwnd, UINT msg, WPARAM wparam, LPARA
         const bool showOverlayTimeout = nowMillis - toolbar->lastTimeCamOrMicMuteStateChanged > OVERLAY_SHOW_TIME;
 
         static bool previousShow = false;
-        bool show = false;
+        bool show = toolbar->ToolbarHide == L"Never";
 
-        if (toolbar->cameraInUse)
+        const bool cameraJustStoppedInUse = toolbar->previouscameraInUse && !toolbar->cameraInUse;
+        bool shouldUnmuteAll = cameraJustStoppedInUse;
+
+        if (toolbar->ToolbarHide == L"When both camera and microphone are muted")
         {
-            show = toolbar->HideToolbarWhenUnmuted ? toolbar->microphoneMuted || toolbar->cameraMuted : true;
+            // We shouldn't unmute devices, since we'd like to only show the toolbar only
+            // when something is unmuted -> the use case is to keep everything muted by default and track it
+            shouldUnmuteAll = false;
+            show = (!toolbar->cameraMuted && toolbar->cameraInUse) || !toolbar->microphoneMuted;
         }
-        else if (toolbar->previouscameraInUse)
-        {
+        else if (toolbar->ToolbarHide == L"When both camera and microphone are unmuted")
+            show = (toolbar->cameraMuted && toolbar->cameraInUse) || toolbar->microphoneMuted;
+
+        if (shouldUnmuteAll && !toolbar->moduleSettingsUpdateScheduled)
             VideoConferenceModule::unmuteAll();
-        }
-        else
-        {
-            show = toolbar->microphoneMuted;
-        }
+
         show = show || !showOverlayTimeout;
-        if (show)
-        {
-            ShowWindow(hwnd, SW_SHOW);
-        }
-        else
-        {
-            ShowWindow(hwnd, SW_HIDE);
-        }
+        ShowWindow(hwnd, show ? SW_SHOW : SW_HIDE);
+
         if (previousShow != show)
         {
             previousShow = show;
@@ -211,7 +209,7 @@ void Toolbar::show(std::wstring position, std::wstring monitorString)
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.lpszClassName = CLASS_NAME;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW);
     wc.lpfnWndProc = WindowProcessMessages;
     RegisterClassW(&wc);
 
@@ -284,7 +282,7 @@ void Toolbar::show(std::wstring position, std::wstring monitorString)
 
         auto transparentColorKey = RGB(0, 0, 255);
         HBRUSH brush = CreateSolidBrush(transparentColorKey);
-        SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
+        SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(brush));
 
         SetLayeredWindowAttributes(hwnd, transparentColorKey, 0, LWA_COLORKEY);
 
@@ -332,9 +330,9 @@ void Toolbar::setMicrophoneMute(bool mute)
     microphoneMuted = mute;
 }
 
-void Toolbar::setHideToolbarWhenUnmuted(bool hide)
+void Toolbar::setToolbarHide(std::wstring hide)
 {
-    HideToolbarWhenUnmuted = hide;
+    ToolbarHide = hide;
 }
 
 void Toolbar::setTheme(std::wstring theme)

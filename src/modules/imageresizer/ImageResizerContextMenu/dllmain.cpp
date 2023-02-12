@@ -79,6 +79,12 @@ public:
 
     IFACEMETHODIMP GetState(_In_opt_ IShellItemArray* selection, _In_ BOOL okToBeSlow, _Out_ EXPCMDSTATE* cmdState)
     {
+        if (nullptr == selection) {
+            // We've observed that it's possible that a null gets passed instead of an empty array. Just don't show the context menu in this case.
+            *cmdState = ECS_HIDDEN;
+            return S_OK;
+        }
+
         if (!CSettingsInstance().GetEnabled())
         {
             *cmdState = ECS_HIDDEN;
@@ -90,13 +96,30 @@ public:
 #pragma warning(suppress : 26812)
         PERCEIVED type;
         PERCEIVEDFLAG flag;
-        IShellItem* shellItem;
+        IShellItem* shellItem=nullptr;
         //Check extension of first item in the list (the item which is right-clicked on)
-        selection->GetItemAt(0, &shellItem);
+        HRESULT getItemResult  = selection->GetItemAt(0, &shellItem);
+        if (S_OK != getItemResult || nullptr == shellItem) {
+            // Some safeguards to avoid runtime errors.
+            *cmdState = ECS_HIDDEN;
+            return S_OK;
+        }
         LPTSTR pszPath;
         // Retrieves the entire file system path of the file from its shell item
-        shellItem->GetDisplayName(SIGDN_FILESYSPATH, &pszPath);
+        HRESULT getDisplayResult = shellItem->GetDisplayName(SIGDN_FILESYSPATH, &pszPath);
+        if (S_OK != getDisplayResult || nullptr == pszPath)
+        {
+            // Avoid crashes in the following code.
+            return E_FAIL;
+        }
+
         LPTSTR pszExt = PathFindExtension(pszPath);
+        if (nullptr == pszExt)
+        {
+            CoTaskMemFree(pszPath);
+            // Avoid crashes in the following code.
+            return E_FAIL;
+        }
 
         // TODO: Instead, detect whether there's a WIC codec installed that can handle this file
         AssocGetPerceivedType(pszExt, &type, &flag, NULL);
@@ -204,7 +227,7 @@ private:
             auto val = get_last_error_message(GetLastError());
             Logger::warn(L"UuidCreate can not create guid. {}", val.has_value() ? val.value() : L"");
         }
-        else if (UuidToString(&temp_uuid, (RPC_WSTR*)&uuid_chars) != RPC_S_OK)
+        else if (UuidToString(&temp_uuid, reinterpret_cast<RPC_WSTR*>(& uuid_chars)) != RPC_S_OK)
         {
             auto val = get_last_error_message(GetLastError());
             Logger::warn(L"UuidToString can not convert to string. {}", val.has_value() ? val.value() : L"");
@@ -213,7 +236,7 @@ private:
         if (uuid_chars != nullptr)
         {
             pipe_name += std::wstring(uuid_chars);
-            RpcStringFree((RPC_WSTR*)&uuid_chars);
+            RpcStringFree(reinterpret_cast<RPC_WSTR*>(&uuid_chars));
             uuid_chars = nullptr;
         }
         create_pipe_thread = std::thread(&ImageResizerContextMenuCommand::StartNamedPipeServerAndSendData, this, pipe_name);

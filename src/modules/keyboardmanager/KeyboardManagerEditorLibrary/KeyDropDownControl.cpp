@@ -80,7 +80,7 @@ void KeyDropDownControl::SetDefaultProperties(bool isShortcut, bool renderDisabl
     // Attach flyout to the drop down
     warningFlyout.as<Flyout>().Content(warningMessage.as<TextBlock>());
 
-    // Enable narrator for Content of FlyoutPresenter. For details https://docs.microsoft.com/en-us/uwp/api/windows.ui.xaml.controls.flyout?view=winrt-19041#accessibility
+    // Enable narrator for Content of FlyoutPresenter. For details https://learn.microsoft.com/uwp/api/windows.ui.xaml.controls.flyout?view=winrt-19041#accessibility
     Style style = Style(winrt::xaml_typename<FlyoutPresenter>());
     style.Setters().Append(Setter(Windows::UI::Xaml::Controls::Control::IsTabStopProperty(), winrt::box_value(true)));
     style.Setters().Append(Setter(Windows::UI::Xaml::Controls::Control::TabNavigationProperty(), winrt::box_value(Windows::UI::Xaml::Input::KeyboardNavigationMode::Cycle)));
@@ -268,7 +268,7 @@ void KeyDropDownControl::SetSelectionHandler(StackPanel& table, StackPanel row, 
             if (targetApp != nullptr)
             {
                 std::wstring newText = targetApp.Text().c_str();
-                std::wstring lowercaseDefAppName = KeyboardManagerEditorStrings::DefaultAppName;
+                std::wstring lowercaseDefAppName = KeyboardManagerEditorStrings::DefaultAppName();
                 std::transform(newText.begin(), newText.end(), newText.begin(), towlower);
                 std::transform(lowercaseDefAppName.begin(), lowercaseDefAppName.end(), lowercaseDefAppName.begin(), towlower);
                 if (newText == lowercaseDefAppName)
@@ -326,7 +326,7 @@ void KeyDropDownControl::AddDropDown(StackPanel& table, StackPanel row, Variable
     keyDropDownControlObjects[keyDropDownControlObjects.size() - 1]->SetSelectionHandler(table, row, parent, colIndex, shortcutRemapBuffer, keyDropDownControlObjects, targetApp, isHybridControl, isSingleKeyWindow);
 
     // Update accessible name
-    SetAccessibleNameForComboBox(keyDropDownControlObjects[keyDropDownControlObjects.size() - 1]->GetComboBox(), (int)keyDropDownControlObjects.size());
+    SetAccessibleNameForComboBox(keyDropDownControlObjects[keyDropDownControlObjects.size() - 1]->GetComboBox(), static_cast<int>(keyDropDownControlObjects.size()));
 }
 
 // Function to get the list of key codes from the shortcut combo box stack panel
@@ -421,8 +421,12 @@ void KeyDropDownControl::AddShortcutToControl(Shortcut shortcut, StackPanel tabl
     }
 }
 
+// Disable 26497 this function should be evaluated at compile time
+#pragma warning(push)
+#pragma warning(disable : 26497)
 // Get number of selected keys. Do not count -1 and 0 values as they stand for Not selected and None
 int KeyDropDownControl::GetNumberOfSelectedKeys(std::vector<int32_t> keyCodes)
 {
     return (int)std::count_if(keyCodes.begin(), keyCodes.end(), [](int32_t a) { return a != -1 && a != 0; });
 }
+#pragma warning(pop)

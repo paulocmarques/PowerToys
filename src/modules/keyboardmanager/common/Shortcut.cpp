@@ -425,23 +425,23 @@ winrt::hstring Shortcut::ToHstringVK() const
     winrt::hstring output;
     if (winKey != ModifierKey::Disabled)
     {
-        output = output + winrt::to_hstring((unsigned int)GetWinKey(ModifierKey::Both)) + winrt::to_hstring(L";");
+        output = output + winrt::to_hstring(static_cast<unsigned int>(GetWinKey(ModifierKey::Both))) + winrt::to_hstring(L";");
     }
     if (ctrlKey != ModifierKey::Disabled)
     {
-        output = output + winrt::to_hstring((unsigned int)GetCtrlKey()) + winrt::to_hstring(L";");
+        output = output + winrt::to_hstring(static_cast<unsigned int>(GetCtrlKey())) + winrt::to_hstring(L";");
     }
     if (altKey != ModifierKey::Disabled)
     {
-        output = output + winrt::to_hstring((unsigned int)GetAltKey()) + winrt::to_hstring(L";");
+        output = output + winrt::to_hstring(static_cast<unsigned int>(GetAltKey())) + winrt::to_hstring(L";");
     }
     if (shiftKey != ModifierKey::Disabled)
     {
-        output = output + winrt::to_hstring((unsigned int)GetShiftKey()) + winrt::to_hstring(L";");
+        output = output + winrt::to_hstring(static_cast<unsigned int>(GetShiftKey())) + winrt::to_hstring(L";");
     }
     if (actionKey != NULL)
     {
-        output = output + winrt::to_hstring((unsigned int)GetActionKey()) + winrt::to_hstring(L";");
+        output = output + winrt::to_hstring(static_cast<unsigned int>(GetActionKey())) + winrt::to_hstring(L";");
     }
 
     if (!output.empty())
@@ -592,13 +592,13 @@ bool Shortcut::CheckModifiersKeyboardState(KeyboardManagerInput::InputInterface&
 }
 
 // Helper method for checking if a key is in a range for cleaner code
-bool in_range(DWORD key, DWORD a, DWORD b)
+constexpr bool in_range(DWORD key, DWORD a, DWORD b)
 {
     return (key >= a && key <= b);
 }
 
 // Helper method for checking if a key is equal to a value for cleaner code
-bool equals(DWORD key, DWORD a)
+constexpr bool equals(DWORD key, DWORD a)
 {
     return (key == a);
 }
@@ -617,7 +617,7 @@ bool IgnoreKeyCode(DWORD key)
         return true;
     }
 
-    // As per docs: https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+    // As per docs: https://learn.microsoft.com/windows/win32/inputdev/virtual-key-codes
     // Undefined keys
     bool isUndefined = equals(key, 0x07) || in_range(key, 0x0E, 0x0F) || in_range(key, 0x3A, 0x40);
 
@@ -783,7 +783,7 @@ bool Shortcut::IsKeyboardStateClearExceptShortcut(KeyboardManagerInput::InputInt
                 }
             }
             // If any other key is pressed check if it is the action key
-            else if (keyVal != actionKey)
+            else if (keyVal != static_cast<int>(actionKey))
             {
                 return false;
             }

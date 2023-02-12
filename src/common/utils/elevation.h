@@ -34,7 +34,7 @@ namespace
     {
         CComPtr<IShellWindows> spShellWindows;
         auto result = spShellWindows.CoCreateInstance(CLSID_ShellWindows);
-        if (result != S_OK)
+        if (result != S_OK || spShellWindows == nullptr)
         {
             Logger::warn(L"Failed to create instance. {}", GetErrorString(result));
             return false;
@@ -47,7 +47,7 @@ namespace
         result = spShellWindows->FindWindowSW(
             &vtLoc, &vtEmpty, SWC_DESKTOP, &lhwnd, SWFO_NEEDDISPATCH, &spdisp);
 
-        if (result != S_OK)
+        if (result != S_OK || spdisp == nullptr)
         {
             Logger::warn(L"Failed to find the window. {}", GetErrorString(result));
             return false;
@@ -56,7 +56,7 @@ namespace
         CComPtr<IShellBrowser> spBrowser;
         result = CComQIPtr<IServiceProvider>(spdisp)->QueryService(SID_STopLevelBrowser,
                                                                    IID_PPV_ARGS(&spBrowser));
-        if (result != S_OK)
+        if (result != S_OK || spBrowser == nullptr)
         {
             Logger::warn(L"Failed to query service. {}", GetErrorString(result));
             return false;
@@ -64,14 +64,14 @@ namespace
 
         CComPtr<IShellView> spView;
         result = spBrowser->QueryActiveShellView(&spView);
-        if (result != S_OK)
+        if (result != S_OK || spView == nullptr)
         {
             Logger::warn(L"Failed to query active shell window. {}", GetErrorString(result));
             return false;
         }
 
         result = spView->QueryInterface(riid, ppv);
-        if (result != S_OK)
+        if (result != S_OK || ppv == nullptr || *ppv == nullptr )
         {
             Logger::warn(L"Failed to query interface. {}", GetErrorString(result));
             return false;
@@ -198,7 +198,7 @@ inline bool drop_elevated_privileges()
     TOKEN_MANDATORY_LABEL label = { 0 };
     label.Label.Attributes = SE_GROUP_INTEGRITY;
     label.Label.Sid = medium_sid;
-    DWORD size = (DWORD)sizeof(TOKEN_MANDATORY_LABEL) + ::GetLengthSid(medium_sid);
+    DWORD size = static_cast<DWORD>(sizeof(TOKEN_MANDATORY_LABEL) + ::GetLengthSid(medium_sid));
 
     BOOL result = SetTokenInformation(token, TokenIntegrityLevel, &label, size);
     LocalFree(medium_sid);
@@ -294,8 +294,9 @@ inline bool run_non_elevated(const std::wstring& file, const std::wstring& param
     siex.StartupInfo.cb = sizeof(siex);
 
     PROCESS_INFORMATION pi = { 0 };
+
     auto succeeded = CreateProcessW(file.c_str(),
-                                    const_cast<LPWSTR>(executable_args.c_str()),
+                                    &executable_args[0],
                                     nullptr,
                                     nullptr,
                                     FALSE,
@@ -395,8 +396,9 @@ inline bool run_same_elevation(const std::wstring& file, const std::wstring& par
 
     STARTUPINFO si = { sizeof(STARTUPINFO) };
     PROCESS_INFORMATION pi = { 0 };
+
     auto succeeded = CreateProcessW(file.c_str(),
-                                    const_cast<LPWSTR>(executable_args.c_str()),
+                                    &executable_args[0],
                                     nullptr,
                                     nullptr,
                                     FALSE,
@@ -464,7 +466,7 @@ inline bool check_user_is_admin()
     }
 
     // Allocate the buffer.
-    pGroupInfo = (PTOKEN_GROUPS)GlobalAlloc(GPTR, dwSize);
+    pGroupInfo = static_cast<PTOKEN_GROUPS>(GlobalAlloc(GPTR, dwSize));
 
     // Call GetTokenInformation again to get the group information.
     if (!GetTokenInformation(hToken, TokenGroups, pGroupInfo, dwSize, &dwSize))

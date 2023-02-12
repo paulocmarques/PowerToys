@@ -2,24 +2,26 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace PowerAccent.Core.Services;
-
+using System.IO.Abstractions;
+using System.Text.Json;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using System.IO.Abstractions;
-using System.Text.Json;
+using PowerToys.PowerAccentKeyboardService;
 
+namespace PowerAccent.Core.Services;
 public class SettingsService
 {
-    private const string PowerAccentModuleName = "PowerAccent";
+    private const string PowerAccentModuleName = "QuickAccent";
     private readonly ISettingsUtils _settingsUtils;
     private readonly IFileSystemWatcher _watcher;
     private readonly object _loadingSettingsLock = new object();
+    private KeyboardListener _keyboardListener;
 
-    public SettingsService()
+    public SettingsService(KeyboardListener keyboardListener)
     {
         _settingsUtils = new SettingsUtils();
+        _keyboardListener = keyboardListener;
         ReadSettings();
         _watcher = Helper.GetFileWatcher(PowerAccentModuleName, "settings.json", () => { ReadSettings(); });
     }
@@ -34,7 +36,7 @@ public class SettingsService
                 {
                     if (!_settingsUtils.SettingsExists(PowerAccentModuleName))
                     {
-                        Logger.LogInfo("PowerAccent settings.json was missing, creating a new one");
+                        Logger.LogInfo("QuickAccent settings.json was missing, creating a new one");
                         var defaultSettings = new PowerAccentSettings();
                         var options = new JsonSerializerOptions
                         {
@@ -48,6 +50,16 @@ public class SettingsService
                     if (settings != null)
                     {
                         ActivationKey = settings.Properties.ActivationKey;
+                        _keyboardListener.UpdateActivationKey((int)ActivationKey);
+
+                        InputTime = settings.Properties.InputTime.Value;
+                        _keyboardListener.UpdateInputTime(InputTime);
+
+                        ExcludedApps = settings.Properties.ExcludedApps.Value;
+                        _keyboardListener.UpdateExcludedApps(ExcludedApps);
+
+                        SelectedLang = Enum.TryParse(settings.Properties.SelectedLang.Value, out Language selectedLangValue) ? selectedLangValue : Language.ALL;
+
                         switch (settings.Properties.ToolbarPosition.Value)
                         {
                             case "Top center":
@@ -78,6 +90,10 @@ public class SettingsService
                                 Position = Position.Center;
                                 break;
                         }
+
+                        ShowUnicodeDescription = settings.Properties.ShowUnicodeDescription;
+                        SortByUsageFrequency = settings.Properties.SortByUsageFrequency;
+                        StartSelectionFromTheLeft = settings.Properties.StartSelectionFromTheLeft;
                     }
                 }
                 catch (Exception ex)
@@ -118,7 +134,7 @@ public class SettingsService
         }
     }
 
-    private int _inputTime = 200;
+    private int _inputTime = PowerAccentSettings.DefaultInputTimeMs;
 
     public int InputTime
     {
@@ -133,36 +149,79 @@ public class SettingsService
         }
     }
 
-    public char[] GetLetterKey(LetterKey letter)
-    {
-        return GetDefaultLetterKey(letter);
-    }
+    private string _excludedApps;
 
-    public static char[] GetDefaultLetterKey(LetterKey letter)
+    public string ExcludedApps
     {
-        switch (letter)
+        get
         {
-            case LetterKey.A:
-                return new char[] { 'à', 'â', 'á', 'ä', 'ã', 'å', 'æ' };
-            case LetterKey.C:
-                return new char[] { 'ć', 'ĉ', 'č', 'ċ', 'ç', 'ḉ' };
-            case LetterKey.E:
-                return new char[] { 'é', 'è', 'ê', 'ë', 'ē', 'ė', '€' };
-            case LetterKey.I:
-                return new char[] { 'î', 'ï', 'í', 'ì', 'ī' };
-            case LetterKey.N:
-                return new char[] { 'ñ', 'ń' };
-            case LetterKey.O:
-                return new char[] { 'ô', 'ö', 'ó', 'ò', 'õ', 'ø', 'œ' };
-            case LetterKey.S:
-                return new char[] { 'š', 'ß', 'ś' };
-            case LetterKey.U:
-                return new char[] { 'û', 'ù', 'ü', 'ú', 'ū' };
-            case LetterKey.Y:
-                return new char[] { 'ÿ', 'ý' };
+            return _excludedApps;
         }
 
-        throw new ArgumentException("Letter {0} is missing", letter.ToString());
+        set
+        {
+            _excludedApps = value;
+        }
+    }
+
+    private Language _selectedLang;
+
+    public Language SelectedLang
+    {
+        get
+        {
+            return _selectedLang;
+        }
+
+        set
+        {
+            _selectedLang = value;
+        }
+    }
+
+    private bool _showUnicodeDescription;
+
+    public bool ShowUnicodeDescription
+    {
+        get
+        {
+            return _showUnicodeDescription;
+        }
+
+        set
+        {
+            _showUnicodeDescription = value;
+        }
+    }
+
+    private bool _sortByUsageFrequency;
+
+    public bool SortByUsageFrequency
+    {
+        get
+        {
+            return _sortByUsageFrequency;
+        }
+
+        set
+        {
+            _sortByUsageFrequency = value;
+        }
+    }
+
+    private bool _startSelectionFromTheLeft;
+
+    public bool StartSelectionFromTheLeft
+    {
+        get
+        {
+            return _startSelectionFromTheLeft;
+        }
+
+        set
+        {
+            _startSelectionFromTheLeft = value;
+        }
     }
 }
 

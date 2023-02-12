@@ -16,7 +16,7 @@ namespace FancyZonesUnitTests
 
         TEST_METHOD_INITIALIZE(Init)
         {
-            m_hInst = (HINSTANCE)GetModuleHandleW(nullptr);
+            m_hInst = static_cast<HINSTANCE>(GetModuleHandleW(nullptr));
             AppZoneHistory::instance().LoadData();
         }
 
@@ -335,7 +335,6 @@ namespace FancyZonesUnitTests
                 .monitorId = { .deviceId = { .id = L"DELA026", .instanceId = L"5&10a58c63&0&UID16777488" } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{39B25DD2-130D-4B5D-8851-4791D66B1539}").value()
             };
-            const auto window = Mocks::WindowCreate(m_hInst);
 
             Assert::IsFalse(AppZoneHistory::instance().RemoveAppLastZone(nullptr, workAreaId, zoneSetId));
         }

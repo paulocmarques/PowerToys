@@ -5,16 +5,17 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
+using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels;
+using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.Resources;
-using Windows.UI.Core;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
 {
-    public sealed partial class PowerLauncherPage : Page
+    public sealed partial class PowerLauncherPage : Page, IRefreshablePage
     {
         public PowerLauncherViewModel ViewModel { get; set; }
 
@@ -35,7 +36,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             InitializeComponent();
             var settingsUtils = new SettingsUtils();
             _lastIPCMessageSentTick = Environment.TickCount;
-            PowerLauncherSettings settings = settingsUtils.GetSettingsOrDefault<PowerLauncherSettings>(PowerLauncherSettings.ModuleName);
+
+            PowerLauncherSettings settings = SettingsRepository<PowerLauncherSettings>.GetInstance(settingsUtils)?.SettingsConfig;
             ViewModel = new PowerLauncherViewModel(settings, SettingsRepository<GeneralSettings>.GetInstance(settingsUtils), SendDefaultIPCMessageTimed, App.IsDarkTheme);
             DataContext = ViewModel;
             _ = Helper.GetFileWatcher(PowerLauncherSettings.ModuleName, "settings.json", () =>
@@ -49,7 +51,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 PowerLauncherSettings powerLauncherSettings = null;
                 try
                 {
-                    powerLauncherSettings = settingsUtils.GetSettingsOrDefault<PowerLauncherSettings>(PowerLauncherSettings.ModuleName);
+                    powerLauncherSettings = SettingsRepository<PowerLauncherSettings>.GetInstance(settingsUtils)?.SettingsConfig;
                 }
                 catch (IOException ex)
                 {
@@ -82,6 +84,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         private void OpenColorsSettings_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             Helpers.StartProcessHelper.Start(Helpers.StartProcessHelper.ColorsSettings);
+        }
+
+        public void RefreshEnabledState()
+        {
+            ViewModel.RefreshEnabledState();
         }
 
         /*

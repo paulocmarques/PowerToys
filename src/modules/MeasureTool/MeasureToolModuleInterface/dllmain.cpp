@@ -3,17 +3,16 @@
 #include <interface/powertoy_module_interface.h>
 #include <common/SettingsAPI/settings_objects.h>
 #include "trace.h"
+#include <common/interop/shared_constants.h>
 #include <common/utils/string_utils.h>
 #include <common/utils/winapi_error.h>
 #include <common/utils/logger_helper.h>
+#include <common/utils/EventWaiter.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-HMODULE m_hModule;
-
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lpReserved*/)
 {
-    m_hModule = hModule;
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
@@ -51,6 +50,9 @@ private:
 
     Hotkey m_hotkey;
     HANDLE m_hProcess;
+
+    HANDLE triggerEvent;
+    EventWaiter triggerEventWaiter;
 
     void parse_hotkey(PowerToysSettings::PowerToyValues& settings)
     {
@@ -128,7 +130,7 @@ private:
 
             parse_hotkey(settings);
         }
-        catch (std::exception ex)
+        catch (std::exception&)
         {
             Logger::warn(L"An exception occurred while loading the settings file");
             // Error while loading from the settings file. Let default values stay as they are.
@@ -145,6 +147,11 @@ public:
     {
         LoggerHelpers::init_logger(L"Measure Tool", L"ModuleInterface", "Measure Tool");
         init_settings();
+
+        triggerEvent = CreateEvent(nullptr, false, false, CommonSharedConstants::MEASURE_TOOL_TRIGGER_EVENT);
+        triggerEventWaiter = EventWaiter(CommonSharedConstants::MEASURE_TOOL_TRIGGER_EVENT, [this](int) {
+            on_hotkey(0);
+        });
     }
 
     ~MeasureTool()
@@ -172,6 +179,12 @@ public:
     virtual const wchar_t* get_key() override
     {
         return MODULE_NAME;
+    }
+
+    // Return the configured status for the gpo policy for the module
+    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+    {
+        return powertoys_gpo::getConfiguredScreenRulerEnabledValue();
     }
 
     // Return JSON with the configuration options.
@@ -208,7 +221,7 @@ public:
             // Otherwise call a custom function to process the settings before saving them to disk:
             // save_settings();
         }
-        catch (std::exception ex)
+        catch (std::exception&)
         {
             // Improper JSON.
         }
@@ -239,7 +252,7 @@ public:
         return m_enabled;
     }
 
-    virtual bool on_hotkey(size_t hotkeyId) override
+    virtual bool on_hotkey(size_t /*hotkeyId*/) override
     {
         if (m_enabled)
         {

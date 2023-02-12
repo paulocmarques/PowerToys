@@ -4,6 +4,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
@@ -12,7 +13,7 @@ using Windows.Storage.Pickers;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
 {
-    public sealed partial class VideoConferencePage : Page
+    public sealed partial class VideoConferencePage : Page, IRefreshablePage
     {
         private VideoConferenceViewModel ViewModel { get; set; }
 
@@ -34,9 +35,19 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         public VideoConferencePage()
         {
             var settingsUtils = new SettingsUtils();
-            ViewModel = new VideoConferenceViewModel(settingsUtils, SettingsRepository<GeneralSettings>.GetInstance(settingsUtils), ShellPage.SendDefaultIPCMessage, PickFileDialog);
+            ViewModel = new VideoConferenceViewModel(
+                settingsUtils,
+                SettingsRepository<GeneralSettings>.GetInstance(settingsUtils),
+                SettingsRepository<VideoConferenceSettings>.GetInstance(settingsUtils),
+                ShellPage.SendDefaultIPCMessage,
+                PickFileDialog);
             DataContext = ViewModel;
             InitializeComponent();
+        }
+
+        public void RefreshEnabledState()
+        {
+            ViewModel.RefreshEnabledState();
         }
     }
 }

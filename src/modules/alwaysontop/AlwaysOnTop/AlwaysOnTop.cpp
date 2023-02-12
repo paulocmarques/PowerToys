@@ -8,8 +8,11 @@
 #include <common/utils/winapi_error.h>
 #include <common/utils/process_path.h>
 
-#include <WinHookEventIDs.h>
 #include <interop/shared_constants.h>
+
+#include <trace.h>
+#include <WinHookEventIDs.h>
+
 
 namespace NonLocalizable
 {
@@ -20,7 +23,7 @@ namespace NonLocalizable
 bool isExcluded(HWND window)
 {
     auto processPath = get_process_path(window);
-    CharUpperBuffW(processPath.data(), (DWORD)processPath.length());
+    CharUpperBuffW(processPath.data(), static_cast<DWORD>(processPath.length()));
     return find_app_name_in_path(processPath, AlwaysOnTopSettings::settings().excludedApps);
 }
 
@@ -180,6 +183,8 @@ void AlwaysOnTop::ProcessCommand(HWND window)
             {
                 m_topmostWindows.erase(iter);
             }
+
+            Trace::AlwaysOnTop::UnpinWindow();
         }
     }
     else
@@ -188,6 +193,7 @@ void AlwaysOnTop::ProcessCommand(HWND window)
         {
             soundType = Sound::Type::On;
             AssignBorder(window);
+            Trace::AlwaysOnTop::PinWindow();
         }
     }
 
@@ -312,13 +318,14 @@ void AlwaysOnTop::RegisterLLKH()
 void AlwaysOnTop::SubscribeToEvents()
 {
     // subscribe to windows events
-    std::array<DWORD, 6> events_to_subscribe = {
+    std::array<DWORD, 7> events_to_subscribe = {
         EVENT_OBJECT_LOCATIONCHANGE,
         EVENT_SYSTEM_MINIMIZESTART,
         EVENT_SYSTEM_MINIMIZEEND,
         EVENT_SYSTEM_MOVESIZEEND,
-        EVENT_OBJECT_NAMECHANGE,
-        EVENT_OBJECT_DESTROY
+        EVENT_SYSTEM_FOREGROUND,
+        EVENT_OBJECT_DESTROY,
+        EVENT_OBJECT_FOCUS,
     };
 
     for (const auto event : events_to_subscribe)
@@ -374,7 +381,7 @@ bool AlwaysOnTop::IsPinned(HWND window) const noexcept
 
 bool AlwaysOnTop::PinTopmostWindow(HWND window) const noexcept
 {
-    if (!SetProp(window, NonLocalizable::WINDOW_IS_PINNED_PROP, (HANDLE)1))
+    if (!SetProp(window, NonLocalizable::WINDOW_IS_PINNED_PROP, reinterpret_cast<HANDLE>(1)))
     {
         Logger::error(L"SetProp failed, {}", get_last_error_or_default(GetLastError()));
     }
@@ -413,11 +420,11 @@ void AlwaysOnTop::HandleWinHookEvent(WinHookEvent* data) noexcept
         return;
     }
 
-    // fix for the https://github.com/microsoft/PowerToys/issues/15300
-    // check if the window was closed, since for some EVENT_OBJECT_DESTROY doesn't work 
     std::vector<HWND> toErase{};
     for (const auto& [window, border] : m_topmostWindows)
     {
+        // check if the window was closed, since for some EVENT_OBJECT_DESTROY doesn't work
+        // fixes https://github.com/microsoft/PowerToys/issues/15300
         bool visible = IsWindowVisible(window);
         if (!visible)
         {
@@ -479,13 +486,22 @@ void AlwaysOnTop::HandleWinHookEvent(WinHookEvent* data) noexcept
         }
     }
     break;
-    case EVENT_OBJECT_NAMECHANGE:
+    case EVENT_SYSTEM_FOREGROUND:
     {
-        // The accessibility name of the desktop window changes whenever the user
-        // switches virtual desktops.
-        if (data->hwnd == GetDesktopWindow())
+        RefreshBorders();
+    }
+    break;
+    case EVENT_OBJECT_FOCUS:
+    {
+        for (const auto& [window, border] : m_topmostWindows)
         {
-            VirtualDesktopSwitchedHandle();
+            // check if topmost was reset
+            // fixes https://github.com/microsoft/PowerToys/issues/19168
+            if (!IsTopmost(window))
+            {
+                Logger::trace(L"A window no longer has Topmost set and it should. Setting topmost again.");
+                PinTopmostWindow(window);
+            }
         }
     }
     break;
@@ -494,17 +510,23 @@ void AlwaysOnTop::HandleWinHookEvent(WinHookEvent* data) noexcept
     }
 }
 
-void AlwaysOnTop::VirtualDesktopSwitchedHandle()
+void AlwaysOnTop::RefreshBorders()
 {
     for (const auto& [window, border] : m_topmostWindows)
     {
         if (m_virtualDesktopUtils.IsWindowOnCurrentDesktop(window))
         {
-            AssignBorder(window);
+            if (!border)
+            {
+                AssignBorder(window);
+            }
         }
         else
         {
-            m_topmostWindows[window] = nullptr;
+            if (border)
+            {
+                m_topmostWindows[window] = nullptr;
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,6 +13,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 {
     public class EnabledModules
     {
+        private Action notifyEnabledChangedAction;
+
         public EnabledModules()
         {
         }
@@ -28,6 +31,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     fancyZones = value;
+                    NotifyChange();
                 }
             }
         }
@@ -76,6 +80,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     shortcutGuide = value;
+                    NotifyChange();
                 }
             }
         }
@@ -139,6 +144,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     powerLauncher = value;
+                    NotifyChange();
                 }
             }
         }
@@ -155,6 +161,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     colorPicker = value;
+                    NotifyChange();
                 }
             }
         }
@@ -241,7 +248,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         private bool powerAccent;
 
-        [JsonPropertyName("PowerAccent")]
+        [JsonPropertyName("QuickAccent")]
         public bool PowerAccent
         {
             get => powerAccent;
@@ -257,7 +264,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         private bool powerOCR = true;
 
-        [JsonPropertyName("PowerOCR")]
+        [JsonPropertyName("TextExtractor")]
         public bool PowerOCR
         {
             get => powerOCR;
@@ -267,6 +274,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     powerOCR = value;
+                    NotifyChange();
                 }
             }
         }
@@ -283,8 +291,47 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 {
                     LogTelemetryEvent(value);
                     measureTool = value;
+                    NotifyChange();
                 }
             }
+        }
+
+        private bool hosts = true;
+
+        [JsonPropertyName("Hosts")]
+        public bool Hosts
+        {
+            get => hosts;
+            set
+            {
+                if (hosts != value)
+                {
+                    LogTelemetryEvent(value);
+                    hosts = value;
+                    NotifyChange();
+                }
+            }
+        }
+
+        private bool fileLocksmith = true;
+
+        [JsonPropertyName("File Locksmith")]
+        public bool FileLocksmith
+        {
+            get => fileLocksmith;
+            set
+            {
+                if (fileLocksmith != value)
+                {
+                    LogTelemetryEvent(value);
+                    fileLocksmith = value;
+                }
+            }
+        }
+
+        private void NotifyChange()
+        {
+            notifyEnabledChangedAction?.Invoke();
         }
 
         public string ToJsonString()
@@ -300,6 +347,11 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 Name = moduleName,
             };
             PowerToysTelemetry.Log.WriteEvent(dataEvent);
+        }
+
+        internal void AddEnabledModuleChangeNotification(Action callBack)
+        {
+            notifyEnabledChangedAction = callBack;
         }
     }
 }

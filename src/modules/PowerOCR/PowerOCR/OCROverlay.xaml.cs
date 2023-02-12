@@ -3,13 +3,18 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.PowerToys.Telemetry;
 using PowerOCR.Helpers;
+using PowerOCR.Settings;
 using PowerOCR.Utilities;
+using Windows.Globalization;
+using Windows.Media.Ocr;
 
 namespace PowerOCR;
 
@@ -30,6 +35,9 @@ public partial class OCROverlay : Window
 
     private Point GetMousePos() => PointToScreen(Mouse.GetPosition(this));
 
+    private Language? selectedLanguage = null;
+    private MenuItem cancelMenuItem;
+
     private System.Windows.Forms.Screen? CurrentScreen
     {
         get;
@@ -42,9 +50,57 @@ public partial class OCROverlay : Window
     private double xShiftDelta;
     private double yShiftDelta;
 
+    private const double ActiveOpacity = 0.4;
+
     public OCROverlay()
     {
         InitializeComponent();
+
+        var userSettings = new UserSettings(new Helpers.ThrottledActionInvoker());
+        string? selectedLanguageName = userSettings.PreferredLanguage.Value;
+
+        // build context menu
+        if (string.IsNullOrEmpty(selectedLanguageName))
+        {
+            selectedLanguage = ImageMethods.GetOCRLanguage();
+            selectedLanguageName = selectedLanguage?.DisplayName;
+        }
+
+        List<Language> possibleOcrLanguages = OcrEngine.AvailableRecognizerLanguages.ToList();
+        foreach (Language language in possibleOcrLanguages)
+        {
+            MenuItem menuItem = new MenuItem() { Header = language.NativeName, Tag = language, IsCheckable = true };
+            menuItem.IsChecked = language.DisplayName.Equals(selectedLanguageName);
+            if (language.DisplayName.Equals(selectedLanguageName))
+            {
+                selectedLanguage = language;
+            }
+
+            menuItem.Click += LanguageMenuItem_Click;
+            CanvasContextMenu.Items.Add(menuItem);
+        }
+
+        CanvasContextMenu.Items.Add(new Separator());
+
+        // ResourceLoader resourceLoader = ResourceLoader.GetForViewIndependentUse(); // resourceLoader.GetString("TextExtractor_Cancel")
+        cancelMenuItem = new MenuItem() { Header = "cancel" };
+        cancelMenuItem.Click += CancelMenuItem_Click;
+        CanvasContextMenu.Items.Add(cancelMenuItem);
+    }
+
+    private void LanguageMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        MenuItem menuItem = (MenuItem)sender;
+        foreach (var item in CanvasContextMenu.Items)
+        {
+            if (item is MenuItem)
+            {
+                MenuItem menuItemLoop = (MenuItem)item;
+                menuItemLoop.IsChecked = item.Equals(menuItem);
+            }
+        }
+
+        selectedLanguage = menuItem.Tag as Language;
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -55,7 +111,7 @@ public partial class OCROverlay : Window
         KeyUp += MainWindow_KeyUp;
 
         BackgroundImage.Source = ImageMethods.GetWindowBoundsImage(this);
-        BackgroundBrush.Opacity = 0.4;
+        BackgroundBrush.Opacity = ActiveOpacity;
     }
 
     private void Window_Unloaded(object sender, RoutedEventArgs e)
@@ -76,7 +132,7 @@ public partial class OCROverlay : Window
         RegionClickCanvas.MouseUp -= RegionClickCanvas_MouseUp;
         RegionClickCanvas.MouseMove -= RegionClickCanvas_MouseMove;
 
-        CancelMenuItem.Click -= CancelMenuItem_Click;
+        cancelMenuItem.Click -= CancelMenuItem_Click;
     }
 
     private void MainWindow_KeyUp(object sender, KeyEventArgs e)
@@ -84,9 +140,6 @@ public partial class OCROverlay : Window
         switch (e.Key)
         {
             case Key.LeftShift:
-                isShiftDown = false;
-                clickedPoint = new Point(clickedPoint.X + xShiftDelta, clickedPoint.Y + yShiftDelta);
-                break;
             case Key.RightShift:
                 isShiftDown = false;
                 clickedPoint = new Point(clickedPoint.X + xShiftDelta, clickedPoint.Y + yShiftDelta);
@@ -102,6 +155,7 @@ public partial class OCROverlay : Window
         {
             case Key.Escape:
                 WindowUtilities.CloseAllOCROverlays();
+                PowerToysTelemetry.Log.WriteEvent(new PowerOCR.Telemetry.PowerOCRCancelledEvent());
                 break;
             default:
                 break;
@@ -110,12 +164,11 @@ public partial class OCROverlay : Window
 
     private void RegionClickCanvas_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.RightButton == MouseButtonState.Pressed)
+        if (e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
 
-        IsSelecting = true;
         RegionClickCanvas.CaptureMouse();
 
         CursorClipper.ClipCursor(this);
@@ -147,8 +200,11 @@ public partial class OCROverlay : Window
             if (scr.Bounds.Contains(formsPoint))
             {
                 CurrentScreen = scr;
+                break;
             }
         }
+
+        IsSelecting = true;
     }
 
     private void RegionClickCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -190,7 +246,7 @@ public partial class OCROverlay : Window
 
             clippingGeometry.Rect = new Rect(
                 new Point(leftValue, topValue),
-                new Size(selectBorder.Width - 2, selectBorder.Height - 2));
+                new Size(selectBorder.Width, selectBorder.Height));
             Canvas.SetLeft(selectBorder, leftValue - 1);
             Canvas.SetTop(selectBorder, topValue - 1);
             return;
@@ -235,11 +291,6 @@ public partial class OCROverlay : Window
         movingPoint.X = Math.Round(movingPoint.X);
         movingPoint.Y = Math.Round(movingPoint.Y);
 
-        if (mPt == movingPoint)
-        {
-            Debug.WriteLine("Probably on Screen 1");
-        }
-
         double xDimScaled = Canvas.GetLeft(selectBorder) * m.M11;
         double yDimScaled = Canvas.GetTop(selectBorder) * m.M22;
 
@@ -262,23 +313,32 @@ public partial class OCROverlay : Window
 
         if (regionScaled.Width < 3 || regionScaled.Height < 3)
         {
-            BackgroundBrush.Opacity = 0;
-            grabbedText = await ImageMethods.GetClickedWord(this, new Point(xDimScaled, yDimScaled));
+            grabbedText = await ImageMethods.GetClickedWord(this, new Point(xDimScaled, yDimScaled), selectedLanguage);
         }
         else
         {
-            grabbedText = await ImageMethods.GetRegionsText(this, regionScaled);
+            grabbedText = await ImageMethods.GetRegionsText(this, regionScaled, selectedLanguage);
         }
 
         if (string.IsNullOrWhiteSpace(grabbedText) == false)
         {
-            Clipboard.SetText(grabbedText);
+            try
+            {
+                Clipboard.SetText(grabbedText);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Clipboard.SetText exception: {ex}");
+            }
+
             WindowUtilities.CloseAllOCROverlays();
+            PowerToysTelemetry.Log.WriteEvent(new PowerOCR.Telemetry.PowerOCRCaptureEvent());
         }
     }
 
     private void CancelMenuItem_Click(object sender, RoutedEventArgs e)
     {
         WindowUtilities.CloseAllOCROverlays();
+        PowerToysTelemetry.Log.WriteEvent(new PowerOCR.Telemetry.PowerOCRCancelledEvent());
     }
 }

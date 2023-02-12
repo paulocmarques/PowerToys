@@ -15,10 +15,12 @@
 #include <common/utils/serialized.h>
 
 //#define DEBUG_OVERLAY
+#include "BGRATextureView.h"
+#include "Measurement.h"
 
 struct OverlayBoxText
 {
-    std::array<wchar_t, 32> buffer = {};
+    std::array<wchar_t, 128> buffer = {};
 };
 
 struct CommonState
@@ -27,18 +29,29 @@ struct CommonState
     D2D1::ColorF lineColor = D2D1::ColorF::OrangeRed;
     Box toolbarBoundingBox;
 
+    Measurement::Unit units = Measurement::Unit::Pixel;
+
     mutable Serialized<OverlayBoxText> overlayBoxText;
     POINT cursorPosSystemSpace = {}; // updated atomically
     std::atomic_bool closeOnOtherMonitors = false;
+};
+
+struct CursorDrag
+{
+    D2D_POINT_2F startPos = {};
+    D2D_POINT_2F currentPos = {};
+    DWORD touchID = 0; // indicate whether the drag belongs to a touch input sequence
 };
 
 struct BoundsToolState
 {
     struct PerScreen
     {
-        std::optional<D2D_POINT_2F> currentRegionStart;
-        std::vector<D2D1_RECT_F> measurements;
+        std::optional<CursorDrag> currentBounds;
+        std::vector<Measurement> measurements;
     };
+
+    // TODO: refactor so we don't need unordered_map
     std::unordered_map<HWND, PerScreen> perScreen;
 
     CommonState* commonState = nullptr; // required for WndProc
@@ -56,7 +69,7 @@ struct MeasureToolState
     struct Global
     {
         uint8_t pixelTolerance = 30;
-        bool continuousCapture = true;
+        bool continuousCapture = false;
         bool drawFeetOnCross = true;
         bool perColorChannelEdgeDetection = false;
         Mode mode = Mode::Cross;
@@ -66,10 +79,10 @@ struct MeasureToolState
     {
         bool cursorInLeftScreenHalf = false;
         bool cursorInTopScreenHalf = false;
-        RECT measuredEdges = {};
+        std::optional<Measurement> measuredEdges;
         // While not in a continuous capturing mode, we need to draw captured backgrounds. These are passed
         // directly from a capturing thread.
-        winrt::com_ptr<ID3D11Texture2D> capturedScreenTexture;
+        const MappedTextureView* capturedScreenTexture = nullptr;
         // After the drawing thread finds its capturedScreenTexture, it converts it to
         // a Direct2D compatible bitmap and caches it here
         winrt::com_ptr<ID2D1Bitmap> capturedScreenBitmap;
@@ -78,6 +91,3 @@ struct MeasureToolState
 
     CommonState* commonState = nullptr; // required for WndProc
 };
-
-// Concurrently accessing Direct2D and Direct3D APIs make the driver go boom
-extern std::recursive_mutex gpuAccessLock;

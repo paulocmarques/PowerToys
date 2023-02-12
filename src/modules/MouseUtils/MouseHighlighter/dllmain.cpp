@@ -84,6 +84,12 @@ public:
         return MODULE_NAME;
     }
 
+    // Return the configured status for the gpo policy for the module
+    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+    {
+        return powertoys_gpo::getConfiguredMouseHighlighterEnabledValue();
+    }
+
     // Return JSON with the configuration options.
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
     {
@@ -209,19 +215,34 @@ public:
             {
                 // Parse Opacity
                 auto jsonPropertiesObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_HIGHLIGHT_OPACITY);
-                opacity = (uint8_t)jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE);
+                int value = static_cast<int>(jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE));
+                if (value >= 0)
+                {
+                    opacity = value;
+                }
+                else
+                {
+                    throw;
+                }
             }
             catch (...)
             {
                 Logger::warn("Failed to initialize Opacity from settings. Will use default value");
             }
+
+            // Convert % to uint8_t
+            if ((std::wstring)settingsObject.GetNamedString(L"version") != L"1.0")
+            {
+                opacity = opacity * 255 / 100;
+            }
+
             try
             {
                 // Parse left button click color
                 auto jsonPropertiesObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_LEFT_BUTTON_CLICK_COLOR);
                 auto leftColor = (std::wstring)jsonPropertiesObject.GetNamedString(JSON_KEY_VALUE);
                 uint8_t r, g, b;
-                if (!checkValidRGB(leftColor,&r,&g,&b))
+                if (!checkValidRGB(leftColor, &r, &g, &b))
                 {
                     Logger::error("Left click color RGB value is invalid. Will use default value");
                 }
@@ -257,7 +278,15 @@ public:
             {
                 // Parse Radius
                 auto jsonPropertiesObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_HIGHLIGHT_RADIUS);
-                highlightSettings.radius = (UINT)jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE);
+                int value = static_cast<int>(jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE));
+                if (value >= 0)
+                {
+                    highlightSettings.radius = value;
+                }
+                else
+                {
+                    throw;
+                }
             }
             catch (...)
             {
@@ -267,7 +296,15 @@ public:
             {
                 // Parse Fade Delay
                 auto jsonPropertiesObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_HIGHLIGHT_FADE_DELAY_MS);
-                highlightSettings.fadeDelayMs = (UINT)jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE);
+                int value = static_cast<int>(jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE));
+                if (value >= 0)
+                {
+                    highlightSettings.fadeDelayMs = value;
+                }
+                else
+                {
+                    throw;
+                }
             }
             catch (...)
             {
@@ -277,7 +314,15 @@ public:
             {
                 // Parse Fade Duration
                 auto jsonPropertiesObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_HIGHLIGHT_FADE_DURATION_MS);
-                highlightSettings.fadeDurationMs = (UINT)jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE);
+                int value = static_cast<int>(jsonPropertiesObject.GetNamedNumber(JSON_KEY_VALUE));
+                if (value >= 0)
+                {
+                    highlightSettings.fadeDurationMs = value;
+                }
+                else
+                {
+                    throw;
+                }
             }
             catch (...)
             {

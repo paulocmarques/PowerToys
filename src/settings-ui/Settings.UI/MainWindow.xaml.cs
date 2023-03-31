@@ -120,9 +120,15 @@ namespace Microsoft.PowerToys.Settings.UI
                     case "MouseHighlighter":
                         needToUpdate = generalSettingsConfig.Enabled.MouseHighlighter != isEnabled;
                         generalSettingsConfig.Enabled.MouseHighlighter = isEnabled; break;
+                    case "MouseJump":
+                        needToUpdate = generalSettingsConfig.Enabled.MouseJump != isEnabled;
+                        generalSettingsConfig.Enabled.MouseJump = isEnabled; break;
                     case "MousePointerCrosshairs":
                         needToUpdate = generalSettingsConfig.Enabled.MousePointerCrosshairs != isEnabled;
                         generalSettingsConfig.Enabled.MousePointerCrosshairs = isEnabled; break;
+                    case "PastePlain":
+                        needToUpdate = generalSettingsConfig.Enabled.PastePlain != isEnabled;
+                        generalSettingsConfig.Enabled.PastePlain = isEnabled; break;
                     case "PowerRename":
                         needToUpdate = generalSettingsConfig.Enabled.PowerRename != isEnabled;
                         generalSettingsConfig.Enabled.PowerRename = isEnabled; break;
@@ -132,6 +138,9 @@ namespace Microsoft.PowerToys.Settings.UI
                     case "PowerAccent":
                         needToUpdate = generalSettingsConfig.Enabled.PowerAccent != isEnabled;
                         generalSettingsConfig.Enabled.PowerAccent = isEnabled; break;
+                    case "RegistryPreview":
+                        needToUpdate = generalSettingsConfig.Enabled.RegistryPreview != isEnabled;
+                        generalSettingsConfig.Enabled.RegistryPreview = isEnabled; break;
                     case "MeasureTool":
                         needToUpdate = generalSettingsConfig.Enabled.MeasureTool != isEnabled;
                         generalSettingsConfig.Enabled.MeasureTool = isEnabled; break;

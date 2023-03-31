@@ -33,8 +33,7 @@ public:
         }
 #endif
         InitLayout(parentUniqueId);
-        InitSnappedWindows();
-
+        
         return true;
     }
     
@@ -42,6 +41,7 @@ public:
     const std::unique_ptr<Layout>& GetLayout() const noexcept { return m_layout; }
     const std::unique_ptr<LayoutAssignedWindows>& GetLayoutWindows() const noexcept { return m_layoutWindows; }
     const HWND GetWorkAreaWindow() const noexcept { return m_window; }
+    const GUID GetLayoutId() const noexcept;
     
     ZoneIndexSet GetWindowZoneIndexes(HWND window) const;
 
@@ -69,8 +69,7 @@ protected:
 private:
     bool InitWindow(HINSTANCE hinstance);
     void InitLayout(const FancyZonesDataTypes::WorkAreaId& parentUniqueId);
-    void InitSnappedWindows();
-
+    
     void CalculateZoneSet();
     void SetWorkAreaWindowAsTopmost(HWND draggedWindow) noexcept;
 

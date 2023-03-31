@@ -405,6 +405,16 @@ void WorkArea::UnsnapWindow(HWND window)
     FancyZonesWindowProperties::RemoveZoneIndexProperty(window);
 }
 
+const GUID WorkArea::GetLayoutId() const noexcept
+{
+    if (m_layout)
+    {
+        return m_layout->Id();
+    }
+
+    return GUID{};
+}
+
 ZoneIndexSet WorkArea::GetWindowZoneIndexes(HWND window) const
 {
     if (m_layout)
@@ -525,33 +535,6 @@ void WorkArea::InitLayout(const FancyZonesDataTypes::WorkAreaId& parentUniqueId)
     }
 
     CalculateZoneSet();
-}
-
-void WorkArea::InitSnappedWindows()
-{
-    Logger::info(L"Init work area windows");
-
-    for (const auto& window : VirtualDesktop::instance().GetWindowsFromCurrentDesktop())
-    {
-        auto zoneIndexSet = FancyZonesWindowProperties::RetrieveZoneIndexProperty(window);
-        if (zoneIndexSet.size() == 0)
-        {
-            continue;
-        }
-
-        if (!m_uniqueId.monitorId.monitor) // one work area across monitors
-        {
-            MoveWindowIntoZoneByIndexSet(window, zoneIndexSet, false);
-        }
-        else
-        {
-            const auto monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONULL);
-            if (monitor && m_uniqueId.monitorId.monitor == monitor)
-            {
-                MoveWindowIntoZoneByIndexSet(window, zoneIndexSet, false);
-            }
-        }
-    }
 }
 
 void WorkArea::CalculateZoneSet()

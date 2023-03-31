@@ -5,6 +5,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 
@@ -49,12 +50,16 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonPropertyName("download_updates_automatically")]
         public bool AutoDownloadUpdates { get; set; }
 
+        [JsonPropertyName("enable_experimentation")]
+        public bool EnableExperimentation { get; set; }
+
         public GeneralSettings()
         {
             Startup = false;
             IsAdmin = false;
             IsElevated = false;
             AutoDownloadUpdates = false;
+            EnableExperimentation = true;
             Theme = "system";
             SystemTheme = "light";
             try

@@ -4,12 +4,6 @@ EXPORTS
 	CheckGPOCA
 	ApplyModulesRegistryChangeSetsCA
 	CreateScheduledTaskCA
-	CreateWinAppSDKHardlinksCA
-	DeleteWinAppSDKHardlinksCA
-	CreatePTInteropHardlinksCA
-	DeletePTInteropHardlinksCA
-	CreateDotnetRuntimeHardlinksCA
-	DeleteDotnetRuntimeHardlinksCA
 	DetectPrevInstallPathCA
 	RemoveScheduledTasksCA
 	TelemetryLogInstallSuccessCA
@@ -28,3 +22,4 @@ EXPORTS
 	UninstallVirtualCameraDriverCA
 	UnRegisterContextMenuPackagesCA
 	UninstallEmbeddedMSIXCA
+	UninstallServicesCA

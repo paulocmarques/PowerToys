@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using CommunityToolkit.WinUI;
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.UI.Xaml;
@@ -16,8 +17,7 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
     public sealed partial class ShortcutControl : UserControl, IDisposable
     {
         private readonly UIntPtr ignoreKeyEventFlag = (UIntPtr)0x5555;
-        private bool _shiftKeyDownOnEntering;
-        private bool _shiftToggled;
+        private System.Collections.Generic.HashSet<VirtualKey> _modifierKeysOnEntering = new System.Collections.Generic.HashSet<VirtualKey>();
         private bool _enabled;
         private HotkeySettings hotkeySettings;
         private HotkeySettings internalSettings;
@@ -33,8 +33,38 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
         public static readonly DependencyProperty IsActiveProperty = DependencyProperty.Register("Enabled", typeof(bool), typeof(ShortcutControl), null);
         public static readonly DependencyProperty HotkeySettingsProperty = DependencyProperty.Register("HotkeySettings", typeof(HotkeySettings), typeof(ShortcutControl), null);
 
+        public static readonly DependencyProperty AllowDisableProperty = DependencyProperty.Register("AllowDisable", typeof(bool), typeof(ShortcutControl), new PropertyMetadata(false, OnAllowDisableChanged));
+
+        private static void OnAllowDisableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var me = d as ShortcutControl;
+            if (me == null)
+            {
+                return;
+            }
+
+            var description = me.c?.FindDescendant<TextBlock>();
+            if (description == null)
+            {
+                return;
+            }
+
+            var resourceLoader = Helpers.ResourceLoaderInstance.ResourceLoader;
+
+            var newValue = (bool)(e?.NewValue ?? false);
+
+            var text = newValue ? resourceLoader.GetString("Activation_Shortcut_With_Disable_Description") : resourceLoader.GetString("Activation_Shortcut_Description");
+            description.Text = text;
+        }
+
         private ShortcutDialogContentControl c = new ShortcutDialogContentControl();
         private ContentDialog shortcutDialog;
+
+        public bool AllowDisable
+        {
+            get => (bool)GetValue(AllowDisableProperty);
+            set => SetValue(AllowDisableProperty, value);
+        }
 
         public bool Enabled
         {
@@ -85,13 +115,9 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             internalSettings = new HotkeySettings();
 
             this.Unloaded += ShortcutControl_Unloaded;
-            hook = new HotkeySettingsControlHook(Hotkey_KeyDown, Hotkey_KeyUp, Hotkey_IsActive, FilterAccessibleKeyboardEvents);
-            var resourceLoader = Helpers.ResourceLoaderInstance.ResourceLoader;
+            this.Loaded += ShortcutControl_Loaded;
 
-            if (App.GetSettingsWindow() != null)
-            {
-                App.GetSettingsWindow().Activated += ShortcutDialog_SettingsWindow_Activated;
-            }
+            var resourceLoader = Helpers.ResourceLoaderInstance.ResourceLoader;
 
             // We create the Dialog in C# because doing it in XAML is giving WinUI/XAML Island bugs when using dark theme.
             shortcutDialog = new ContentDialog
@@ -104,11 +130,12 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
                 CloseButtonText = resourceLoader.GetString("Activation_Shortcut_Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
             };
-            shortcutDialog.PrimaryButtonClick += ShortcutDialog_PrimaryButtonClick;
             shortcutDialog.SecondaryButtonClick += ShortcutDialog_Reset;
-            shortcutDialog.Opened += ShortcutDialog_Opened;
-            shortcutDialog.Closing += ShortcutDialog_Closing;
+            shortcutDialog.RightTapped += ShortcutDialog_Disable;
+
             AutomationProperties.SetName(EditButton, resourceLoader.GetString("Activation_Shortcut_Title"));
+
+            OnAllowDisableChanged(this, null);
         }
 
         private void ShortcutControl_Unloaded(object sender, RoutedEventArgs e)
@@ -123,36 +150,74 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             }
 
             // Dispose the HotkeySettingsControlHook object to terminate the hook threads when the textbox is unloaded
-            if (hook != null)
-            {
-                hook.Dispose();
-            }
+            hook?.Dispose();
 
             hook = null;
         }
 
+        private void ShortcutControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // These all belong here; because of virtualization in e.g. a ListView, the control can go through several Loaded / Unloaded cycles.
+            hook?.Dispose();
+
+            hook = new HotkeySettingsControlHook(Hotkey_KeyDown, Hotkey_KeyUp, Hotkey_IsActive, FilterAccessibleKeyboardEvents);
+
+            shortcutDialog.PrimaryButtonClick += ShortcutDialog_PrimaryButtonClick;
+            shortcutDialog.Opened += ShortcutDialog_Opened;
+            shortcutDialog.Closing += ShortcutDialog_Closing;
+
+            if (App.GetSettingsWindow() != null)
+            {
+                App.GetSettingsWindow().Activated += ShortcutDialog_SettingsWindow_Activated;
+            }
+        }
+
         private void KeyEventHandler(int key, bool matchValue, int matchValueCode)
         {
-            switch ((VirtualKey)key)
+            VirtualKey virtualKey = (VirtualKey)key;
+            switch (virtualKey)
             {
                 case VirtualKey.LeftWindows:
                 case VirtualKey.RightWindows:
+                    if (!matchValue && _modifierKeysOnEntering.Contains(virtualKey))
+                    {
+                        SendSingleKeyboardInput((short)virtualKey, (uint)NativeKeyboardHelper.KeyEventF.KeyUp);
+                        _ = _modifierKeysOnEntering.Remove(virtualKey);
+                    }
+
                     internalSettings.Win = matchValue;
                     break;
                 case VirtualKey.Control:
                 case VirtualKey.LeftControl:
                 case VirtualKey.RightControl:
+                    if (!matchValue && _modifierKeysOnEntering.Contains(VirtualKey.Control))
+                    {
+                        SendSingleKeyboardInput((short)virtualKey, (uint)NativeKeyboardHelper.KeyEventF.KeyUp);
+                        _ = _modifierKeysOnEntering.Remove(VirtualKey.Control);
+                    }
+
                     internalSettings.Ctrl = matchValue;
                     break;
                 case VirtualKey.Menu:
                 case VirtualKey.LeftMenu:
                 case VirtualKey.RightMenu:
+                    if (!matchValue && _modifierKeysOnEntering.Contains(VirtualKey.Menu))
+                    {
+                        SendSingleKeyboardInput((short)virtualKey, (uint)NativeKeyboardHelper.KeyEventF.KeyUp);
+                        _ = _modifierKeysOnEntering.Remove(VirtualKey.Menu);
+                    }
+
                     internalSettings.Alt = matchValue;
                     break;
                 case VirtualKey.Shift:
                 case VirtualKey.LeftShift:
                 case VirtualKey.RightShift:
-                    _shiftToggled = true;
+                    if (!matchValue && _modifierKeysOnEntering.Contains(VirtualKey.Shift))
+                    {
+                        SendSingleKeyboardInput((short)virtualKey, (uint)NativeKeyboardHelper.KeyEventF.KeyUp);
+                        _ = _modifierKeysOnEntering.Remove(VirtualKey.Shift);
+                    }
+
                     internalSettings.Shift = matchValue;
                     break;
                 case VirtualKey.Escape:
@@ -201,13 +266,13 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             if ((VirtualKey)key == VirtualKey.Tab)
             {
                 // Shift was not pressed while entering and Shift is not pressed while leaving the hotkey control, treat it as a normal tab key press.
-                if (!internalSettings.Shift && !_shiftKeyDownOnEntering && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
+                if (!internalSettings.Shift && !_modifierKeysOnEntering.Contains(VirtualKey.Shift) && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
                 {
                     return false;
                 }
 
                 // Shift was not pressed while entering but it was pressed while leaving the hotkey, therefore simulate a shift key press as the system does not know about shift being pressed in the hotkey.
-                else if (internalSettings.Shift && !_shiftKeyDownOnEntering && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
+                else if (internalSettings.Shift && !_modifierKeysOnEntering.Contains(VirtualKey.Shift) && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
                 {
                     // This is to reset the shift key press within the control as it was not used within the control but rather was used to leave the hotkey.
                     internalSettings.Shift = false;
@@ -219,27 +284,8 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
 
                 // Shift was pressed on entering and remained pressed, therefore only ignore the tab key so that it can be passed to the system.
                 // As the shift key is already assumed to be pressed by the system while it entered the hotkey control, shift would still remain pressed, hence ignoring the tab input would simulate a Shift+Tab key press.
-                else if (!internalSettings.Shift && _shiftKeyDownOnEntering && !_shiftToggled && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
+                else if (!internalSettings.Shift && _modifierKeysOnEntering.Contains(VirtualKey.Shift) && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
                 {
-                    return false;
-                }
-
-                // Shift was pressed on entering but it was released and later pressed again.
-                // Ignore the tab key and the system already has the shift key pressed, therefore this would simulate Shift+Tab.
-                // However, since the last shift key was only used to move out of the control, reset the status of shift within the control.
-                else if (internalSettings.Shift && _shiftKeyDownOnEntering && _shiftToggled && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
-                {
-                    internalSettings.Shift = false;
-
-                    return false;
-                }
-
-                // Shift was pressed on entering and was later released.
-                // The system still has shift in the key pressed status, therefore pass a Shift KeyUp message to the system, to release the shift key, therefore simulating only the Tab key press.
-                else if (!internalSettings.Shift && _shiftKeyDownOnEntering && _shiftToggled && !internalSettings.Win && !internalSettings.Alt && !internalSettings.Ctrl)
-                {
-                    SendSingleKeyboardInput((short)VirtualKey.Shift, (uint)NativeKeyboardHelper.KeyEventF.KeyUp);
-
                     return false;
                 }
             }
@@ -283,7 +329,7 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             // Tab and Shift+Tab are accessible keys and should not be displayed in the hotkey control.
             if (internalSettings.Code > 0 && !internalSettings.IsAccessibleShortcut())
             {
-                lastValidSettings = internalSettings.Clone();
+                lastValidSettings = internalSettings with { };
 
                 if (!ComboIsValid(lastValidSettings))
                 {
@@ -294,6 +340,8 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
                     EnableKeys();
                 }
             }
+
+            c.IsWarningAltGr = internalSettings.Ctrl && internalSettings.Alt && !internalSettings.Win && (internalSettings.Code > 0);
         }
 
         private void EnableKeys()
@@ -334,13 +382,32 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             }
 
             // Reset the status on entering the hotkey each time.
-            _shiftKeyDownOnEntering = false;
-            _shiftToggled = false;
+            _modifierKeysOnEntering.Clear();
 
-            // To keep track of the shift key, whether it was pressed on entering.
+            // To keep track of the modifier keys, whether it was pressed on entering.
             if ((NativeMethods.GetAsyncKeyState((int)VirtualKey.Shift) & 0x8000) != 0)
             {
-                _shiftKeyDownOnEntering = true;
+                _modifierKeysOnEntering.Add(VirtualKey.Shift);
+            }
+
+            if ((NativeMethods.GetAsyncKeyState((int)VirtualKey.Control) & 0x8000) != 0)
+            {
+                _modifierKeysOnEntering.Add(VirtualKey.Control);
+            }
+
+            if ((NativeMethods.GetAsyncKeyState((int)VirtualKey.Menu) & 0x8000) != 0)
+            {
+                _modifierKeysOnEntering.Add(VirtualKey.Menu);
+            }
+
+            if ((NativeMethods.GetAsyncKeyState((int)VirtualKey.LeftWindows) & 0x8000) != 0)
+            {
+                _modifierKeysOnEntering.Add(VirtualKey.LeftWindows);
+            }
+
+            if ((NativeMethods.GetAsyncKeyState((int)VirtualKey.RightWindows) & 0x8000) != 0)
+            {
+                _modifierKeysOnEntering.Add(VirtualKey.RightWindows);
             }
 
             _isActive = true;
@@ -350,6 +417,10 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
         {
             c.Keys = null;
             c.Keys = HotkeySettings.GetKeysList();
+
+            // 92 means the Win key. The logic is: warning should be visible if the shortcut contains Alt AND contains Ctrl AND NOT contains Win.
+            // Additional key must be present, as this is a valid, previously used shortcut shown at dialog open. Check for presence of non-modifier-key is not necessary therefore
+            c.IsWarningAltGr = c.Keys.Contains("Ctrl") && c.Keys.Contains("Alt") && !c.Keys.Contains(92);
 
             shortcutDialog.XamlRoot = this.XamlRoot;
             shortcutDialog.RequestedTheme = this.ActualTheme;
@@ -373,10 +444,25 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
         {
             if (ComboIsValid(lastValidSettings))
             {
-                HotkeySettings = lastValidSettings.Clone();
+                HotkeySettings = lastValidSettings with { };
             }
 
             PreviewKeysControl.ItemsSource = hotkeySettings.GetKeysList();
+            AutomationProperties.SetHelpText(EditButton, HotkeySettings.ToString());
+            shortcutDialog.Hide();
+        }
+
+        private void ShortcutDialog_Disable(object sender, RightTappedRoutedEventArgs e)
+        {
+            if (!AllowDisable)
+            {
+                return;
+            }
+
+            var empty = new HotkeySettings();
+            HotkeySettings = empty;
+
+            PreviewKeysControl.ItemsSource = HotkeySettings.GetKeysList();
             AutomationProperties.SetHelpText(EditButton, HotkeySettings.ToString());
             shortcutDialog.Hide();
         }

@@ -15,6 +15,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Threading.Tasks;
+using Microsoft.PowerToys.Settings.UI.Library;
 using Windows.UI.Input.Preview.Injection;
 using static MouseWithoutBorders.Class.NativeMethods;
 
@@ -352,6 +353,15 @@ namespace MouseWithoutBorders.Class
         private static bool ctrlDown;
         private static bool altDown;
         private static bool shiftDown;
+        internal static readonly string[] Args = new string[] { "CAD" };
+
+        private static void ResetModifiersState(HotkeySettings matchingHotkey)
+        {
+            ctrlDown = ctrlDown && matchingHotkey.Ctrl;
+            altDown = altDown && matchingHotkey.Alt;
+            shiftDown = shiftDown && matchingHotkey.Shift;
+            winDown = winDown && matchingHotkey.Win;
+        }
 
         private static void InputProcessKeyEx(int vkCode, int flags, out bool eatKey)
         {
@@ -387,28 +397,15 @@ namespace MouseWithoutBorders.Class
             }
             else
             {
-                if (vkCode == Setting.Values.HotKeyLockMachine)
+                if (Common.HotkeyMatched(vkCode, winDown, ctrlDown, altDown, shiftDown, Setting.Values.HotKeyLockMachine))
                 {
                     if (!Common.RunOnLogonDesktop
                         && !Common.RunOnScrSaverDesktop)
                     {
-                        if (ctrlDown && altDown)
-                        {
-                            ctrlDown = altDown = false;
-                            eatKey = true;
-                            Common.ReleaseAllKeys();
-                            _ = NativeMethods.LockWorkStation();
-                        }
-                    }
-                }
-                else if (vkCode == Setting.Values.HotKeyCaptureScreen && ctrlDown && shiftDown && !altDown)
-                {
-                    ctrlDown = shiftDown = false;
-
-                    if (!Common.RunOnLogonDesktop && !Common.RunOnScrSaverDesktop)
-                    {
-                        Common.PrepareScreenCapture();
+                        ResetModifiersState(Setting.Values.HotKeyLockMachine);
                         eatKey = true;
+                        Common.ReleaseAllKeys();
+                        _ = NativeMethods.LockWorkStation();
                     }
                 }
 
@@ -460,7 +457,7 @@ namespace MouseWithoutBorders.Class
                         if (ctrlDown && altDown)
                         {
                             ctrlDown = altDown = false;
-                            new ServiceController("MouseWithoutBordersSvc").Start(new string[] { "CAD" });
+                            new ServiceController("MouseWithoutBordersSvc").Start(Args);
                         }
 
                         break;

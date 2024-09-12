@@ -15,6 +15,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     {
         public const string DefaultStlThumbnailColor = "#FFC924";
         public const int DefaultMonacoMaxFileSize = 50;
+        public const int DefaultMonacoFontSize = 14;
         public const int DefaultSvgBackgroundColorMode = (int)SvgPreviewColorMode.Default;
         public const string DefaultSvgBackgroundSolidColor = "#FFFFFF";
         public const int DefaultSvgBackgroundCheckeredShade = (int)SvgPreviewCheckeredShade.Light;
@@ -133,6 +134,26 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonPropertyName("monaco-previewer-max-file-size")]
         public IntProperty MonacoPreviewMaxFileSize { get; set; }
 
+        [JsonPropertyName("monaco-previewer-font-size")]
+        public IntProperty MonacoPreviewFontSize { get; set; }
+
+        private bool monacoPreviewStickyScroll = true;
+
+        [JsonPropertyName("monaco-previewer-sticky-scroll")]
+        [JsonConverter(typeof(BoolPropertyJsonConverter))]
+        public bool MonacoPreviewStickyScroll
+        {
+            get => monacoPreviewStickyScroll;
+            set
+            {
+                if (value != monacoPreviewStickyScroll)
+                {
+                    LogTelemetryEvent(value);
+                    monacoPreviewStickyScroll = value;
+                }
+            }
+        }
+
         private bool enablePdfPreview;
 
         [JsonPropertyName("pdf-previewer-toggle-setting")]
@@ -221,6 +242,40 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonPropertyName("stl-thumbnail-color-setting")]
         public StringProperty StlThumbnailColor { get; set; }
 
+        private bool enableQoiPreview = true;
+
+        [JsonPropertyName("qoi-previewer-toggle-setting")]
+        [JsonConverter(typeof(BoolPropertyJsonConverter))]
+        public bool EnableQoiPreview
+        {
+            get => enableQoiPreview;
+            set
+            {
+                if (value != enableQoiPreview)
+                {
+                    LogTelemetryEvent(value);
+                    enableQoiPreview = value;
+                }
+            }
+        }
+
+        private bool enableQoiThumbnail = true;
+
+        [JsonPropertyName("qoi-thumbnail-toggle-setting")]
+        [JsonConverter(typeof(BoolPropertyJsonConverter))]
+        public bool EnableQoiThumbnail
+        {
+            get => enableQoiThumbnail;
+            set
+            {
+                if (value != enableQoiThumbnail)
+                {
+                    LogTelemetryEvent(value);
+                    enableQoiThumbnail = value;
+                }
+            }
+        }
+
         public PowerPreviewProperties()
         {
             SvgBackgroundColorMode = new IntProperty(DefaultSvgBackgroundColorMode);
@@ -228,6 +283,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             SvgBackgroundCheckeredShade = new IntProperty(DefaultSvgBackgroundCheckeredShade);
             StlThumbnailColor = new StringProperty(DefaultStlThumbnailColor);
             MonacoPreviewMaxFileSize = new IntProperty(DefaultMonacoMaxFileSize);
+            MonacoPreviewFontSize = new IntProperty(DefaultMonacoFontSize);
         }
 
         public override string ToString()

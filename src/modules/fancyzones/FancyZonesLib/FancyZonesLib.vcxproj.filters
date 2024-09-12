@@ -54,7 +54,7 @@
     <ClInclude Include="MouseButtonsHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MonitorWorkAreaMap.h">
+    <ClInclude Include="WorkAreaConfiguration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GenericKeyHook.h">
@@ -153,16 +153,22 @@
     <ClInclude Include="HighlightedZones.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NotificationUtil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HighlightedZones.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DraggingState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowDrag.h">
+    <ClInclude Include="WindowMouseSnap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowKeyboardSnap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FancyZonesData\LastUsedVirtualDesktop.h">
+      <Filter>Header Files\FancyZonesData</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardInput.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -197,7 +203,7 @@
     <ClCompile Include="MouseButtonsHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MonitorWorkAreaMap.cpp">
+    <ClCompile Include="WorkAreaConfiguration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FancyZonesData.cpp">
@@ -263,7 +269,19 @@
     <ClCompile Include="DraggingState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WindowDrag.cpp">
+    <ClCompile Include="WindowMouseSnap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowKeyboardSnap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FancyZonesData\LastUsedVirtualDesktop.cpp">
+      <Filter>Source Files\FancyZonesData</Filter>
+    </ClCompile>
+    <ClCompile Include="FancyZonesWindowProcessing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -283,5 +301,8 @@
     <ResourceCompile Include="Generated Files/fancyzones.rc">
       <Filter>Generated Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
   </ItemGroup>
 </Project>

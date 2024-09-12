@@ -742,11 +742,13 @@ namespace MouseWithoutBorders
             LoadMachines();
         }
 
+        internal static readonly string[] Separator = new string[] { "\r\n" };
+
         internal void ShowTip(ToolTipIcon icon, string text, int duration)
         {
             int x = 0;
             text += "\r\n ";
-            int y = (-text.Split(new string[] { "\r\n" }, StringSplitOptions.None).Length * 15) - 30;
+            int y = (-text.Split(Separator, StringSplitOptions.None).Length * 15) - 30;
 
             toolTipManual.Hide(this);
 
@@ -795,6 +797,14 @@ namespace MouseWithoutBorders
                 checkBoxHideLogo.Enabled = false;
             }
 
+            // Note(@htcfreek): Disable checkboxes of settings that we don't support in the PowerToys implementation
+            checkBoxDisableCAD.Enabled = false;
+            checkBoxDisableCAD.Text = checkBoxDisableCAD.Text + " [Unsupported!]";
+            checkBoxHideLogo.Enabled = false;
+            checkBoxHideLogo.Text = checkBoxHideLogo.Text + " [Unsupported!]";
+            checkBoxSendLog.Enabled = false;
+            checkBoxSendLog.Text = checkBoxSendLog.Text + " [Unsupported!]";
+
             checkBoxShareClipboard.Checked = Setting.Values.ShareClipboard;
 
             if (!Setting.Values.ShareClipboard)
@@ -830,12 +840,10 @@ namespace MouseWithoutBorders
             comboBoxShowSettings.Text = "Disable";
 
             comboBoxExitMM.Text = Setting.Values.HotKeyExitMM == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyExitMM });
-
+#if OBSOLETE_SHORTCUTS
             comboBoxLockMachine.Text = Setting.Values.HotKeyLockMachine == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyLockMachine });
 
             comboBoxReconnect.Text = Setting.Values.HotKeyReconnect == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyReconnect });
-
-            comboBoxScreenCapture.Text = Setting.Values.HotKeyCaptureScreen == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyCaptureScreen });
 
             comboBoxSwitchToAllPC.Text = Setting.Values.HotKeySwitch2AllPC == 1
                 ? "Ctrl*3"
@@ -844,6 +852,57 @@ namespace MouseWithoutBorders
             comboBoxEasyMouseOption.Text = ((EasyMouseOption)Setting.Values.EasyMouse).ToString();
 
             comboBoxEasyMouse.Text = Setting.Values.HotKeyToggleEasyMouse == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyToggleEasyMouse });
+#endif
+
+            // Apply policy configuration on UI elements
+            // Has to be the last action
+            if (Setting.Values.ShareClipboardIsGpoConfigured)
+            {
+                checkBoxShareClipboard.Enabled = false;
+                checkBoxShareClipboard.Text += " [Managed]";
+
+                // transfer file setting depends on clipboard sharing
+                checkBoxTransferFile.Enabled = false;
+            }
+
+            if (Setting.Values.TransferFileIsGpoConfigured)
+            {
+                checkBoxTransferFile.Enabled = false;
+                checkBoxTransferFile.Text += " [Managed]";
+            }
+
+            if (Setting.Values.BlockScreenSaverIsGpoConfigured)
+            {
+                checkBoxBlockScreenSaver.Enabled = false;
+                checkBoxBlockScreenSaver.Text += " [Managed]";
+            }
+
+            if (Setting.Values.SameSubNetOnlyIsGpoConfigured)
+            {
+                checkBoxSameSubNet.Enabled = false;
+                checkBoxSameSubNet.Text += " [Managed]";
+            }
+
+            if (Setting.Values.ReverseLookupIsGpoConfigured)
+            {
+                checkBoxReverseLookup.Enabled = false;
+                checkBoxReverseLookup.Text += " [Managed]";
+            }
+
+            if (Setting.Values.Name2IpIsGpoConfigured)
+            {
+                textBoxMachineName2IP.Enabled = false;
+                groupBoxDNS.ForeColor = Color.DimGray;
+                groupBoxDNS.Text += " [Managed]";
+            }
+
+            if (Setting.Values.Name2IpPolicyListIsGpoConfigured)
+            {
+                pictureBoxMouseWithoutBorders.Visible = false;
+                groupBoxName2IPPolicyList.Visible = true;
+                textBoxMachineName2IPPolicyList.Visible = true;
+                textBoxMachineName2IPPolicyList.Text = Setting.Values.Name2IpPolicyList;
+            }
         }
 
         private void RadioButton_CheckedChanged(object sender, EventArgs e)
@@ -870,6 +929,7 @@ namespace MouseWithoutBorders
 
         private void ComboBoxLockMachine_TextChanged(object sender, EventArgs e)
         {
+#if OBSOLETE_SHORTCUTS
             if (comboBoxLockMachine.Text.Contains("Disable"))
             {
                 Setting.Values.HotKeyLockMachine = 0;
@@ -878,10 +938,12 @@ namespace MouseWithoutBorders
             {
                 Setting.Values.HotKeyLockMachine = comboBoxLockMachine.Text[0];
             }
+#endif
         }
 
         private void ComboBoxSwitchToAllPC_TextChanged(object sender, EventArgs e)
         {
+#if OBSOLETE_SHORTCUTS
             if (comboBoxSwitchToAllPC.Text.Contains("Disable"))
             {
                 Setting.Values.HotKeySwitch2AllPC = 0;
@@ -894,7 +956,7 @@ namespace MouseWithoutBorders
             {
                 Setting.Values.HotKeySwitch2AllPC = comboBoxSwitchToAllPC.Text[0];
             }
-
+#endif
             ShowUpdateMessage();
         }
 
@@ -957,6 +1019,7 @@ namespace MouseWithoutBorders
 
         private void ComboBoxReconnect_TextChanged(object sender, EventArgs e)
         {
+#if OBSOLETE_SHORTCUTS
             if (comboBoxReconnect.Text.Contains("Disable"))
             {
                 Setting.Values.HotKeyReconnect = 0;
@@ -965,7 +1028,7 @@ namespace MouseWithoutBorders
             {
                 Setting.Values.HotKeyReconnect = comboBoxReconnect.Text[0];
             }
-
+#endif
             ShowUpdateMessage();
         }
 
@@ -1006,6 +1069,7 @@ namespace MouseWithoutBorders
 
         private void ComboBoxEasyMouse_TextChanged(object sender, EventArgs e)
         {
+#if OBSOLETE_SHORTCUTS
             if (comboBoxEasyMouse.Text.Contains("Disable"))
             {
                 Setting.Values.HotKeyToggleEasyMouse = 0;
@@ -1014,7 +1078,7 @@ namespace MouseWithoutBorders
             {
                 Setting.Values.HotKeyToggleEasyMouse = comboBoxEasyMouse.Text[0];
             }
-
+#endif
             ShowUpdateMessage();
         }
 

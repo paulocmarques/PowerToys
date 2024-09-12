@@ -57,7 +57,6 @@
 #define SpanZonesAcrossMonitorsKey "SpanZonesAcrossMonitors"
 #define MakeDraggedWindowTransparentKey "MakeDraggedWindowTransparent"
 #define AllowSnapChildWindows "AllowSnapChildWindows"
-#define AllowSnapPopupWindows "AllowSnapPopupWindows"
 #define DisableRoundCornersOnSnapping "DisableRoundCornersOnSnapping"
 #define ZoneColorKey "ZoneColor"
 #define ZoneBorderColorKey "ZoneBorderColor"
@@ -90,17 +89,17 @@ struct ZoneSetInfo
 };
 
 
-ZoneSetInfo GetZoneSetInfo(_In_opt_ Layout* layout, _In_opt_ LayoutAssignedWindows* layoutWindows) noexcept
+ZoneSetInfo GetZoneSetInfo(_In_opt_ Layout* layout, const LayoutAssignedWindows& layoutWindows) noexcept
 {
     ZoneSetInfo info;
-    if (layout && layoutWindows)
+    if (layout)
     {
         auto zones = layout->Zones();
         info.NumberOfZones = zones.size();
         info.NumberOfWindows = 0;
         for (int i = 0; i < static_cast<int>(zones.size()); i++)
         {
-            if (!layoutWindows->IsZoneEmpty(i))
+            if (!layoutWindows.IsZoneEmpty(i))
             {
                 info.NumberOfWindows++;
             }
@@ -258,7 +257,7 @@ void Trace::FancyZones::QuickLayoutSwitched(bool shortcutUsed) noexcept
         TraceLoggingBoolean(shortcutUsed, QuickLayoutSwitchedWithShortcutUsed));
 }
 
-void Trace::FancyZones::SnapNewWindowIntoZone(Layout* activeLayout, LayoutAssignedWindows* layoutWindows) noexcept
+void Trace::FancyZones::SnapNewWindowIntoZone(Layout* activeLayout, const LayoutAssignedWindows& layoutWindows) noexcept
 {
     auto const zoneInfo = GetZoneSetInfo(activeLayout, layoutWindows);
     TraceLoggingWrite(
@@ -271,7 +270,7 @@ void Trace::FancyZones::SnapNewWindowIntoZone(Layout* activeLayout, LayoutAssign
         TraceLoggingValue(zoneInfo.NumberOfWindows, NumberOfWindowsKey));
 }
 
-void Trace::FancyZones::KeyboardSnapWindowToZone(Layout* activeLayout, LayoutAssignedWindows* layoutWindows) noexcept
+void Trace::FancyZones::KeyboardSnapWindowToZone(Layout* activeLayout, const LayoutAssignedWindows& layoutWindows) noexcept
 {
     auto const zoneInfo = GetZoneSetInfo(activeLayout, layoutWindows);
     TraceLoggingWrite(
@@ -307,7 +306,7 @@ void Trace::SettingsTelemetry(const Settings& settings) noexcept
         TraceLoggingKeyword(PROJECT_KEYWORD_MEASURE),
         TraceLoggingBoolean(settings.shiftDrag, ShiftDragKey),
         TraceLoggingBoolean(settings.mouseSwitch, MouseSwitchKey),
-        TraceLoggingBoolean(settings.displayChange_moveWindows, MoveWindowsOnDisplayChangeKey),
+        TraceLoggingBoolean(settings.displayOrWorkAreaChange_moveWindows, MoveWindowsOnDisplayChangeKey),
         TraceLoggingBoolean(settings.zoneSetChange_flashZones, FlashZonesOnZoneSetChangeKey),
         TraceLoggingBoolean(settings.zoneSetChange_moveWindows, MoveWindowsOnZoneSetChangeKey),
         TraceLoggingBoolean(settings.overrideSnapHotkeys, OverrideSnapHotKeysKey),
@@ -323,7 +322,6 @@ void Trace::SettingsTelemetry(const Settings& settings) noexcept
         TraceLoggingBoolean(settings.spanZonesAcrossMonitors, SpanZonesAcrossMonitorsKey),
         TraceLoggingBoolean(settings.makeDraggedWindowTransparent, MakeDraggedWindowTransparentKey),
         TraceLoggingBoolean(settings.allowSnapChildWindows, AllowSnapChildWindows),
-        TraceLoggingBoolean(settings.allowSnapPopupWindows, AllowSnapPopupWindows),
         TraceLoggingBoolean(settings.disableRoundCorners, DisableRoundCornersOnSnapping),
         TraceLoggingWideString(settings.zoneColor.c_str(), ZoneColorKey),
         TraceLoggingWideString(settings.zoneBorderColor.c_str(), ZoneBorderColorKey),
@@ -356,7 +354,7 @@ void Trace::WorkArea::KeyUp(WPARAM wParam) noexcept
         TraceLoggingValue(wParam, KeyboardValueKey));
 }
 
-void Trace::WorkArea::MoveOrResizeStarted(_In_opt_ Layout* activeLayout, _In_opt_ LayoutAssignedWindows* layoutWindows) noexcept
+void Trace::WorkArea::MoveOrResizeStarted(_In_opt_ Layout* activeLayout, const LayoutAssignedWindows& layoutWindows) noexcept
 {
     auto const zoneInfo = GetZoneSetInfo(activeLayout, layoutWindows);
     TraceLoggingWrite(
@@ -369,7 +367,7 @@ void Trace::WorkArea::MoveOrResizeStarted(_In_opt_ Layout* activeLayout, _In_opt
         TraceLoggingValue(zoneInfo.NumberOfWindows, NumberOfWindowsKey));
 }
 
-void Trace::WorkArea::MoveOrResizeEnd(_In_opt_ Layout* activeLayout, _In_opt_ LayoutAssignedWindows* layoutWindows) noexcept
+void Trace::WorkArea::MoveOrResizeEnd(_In_opt_ Layout* activeLayout, const LayoutAssignedWindows& layoutWindows) noexcept
 {
     auto const zoneInfo = GetZoneSetInfo(activeLayout, layoutWindows);
     TraceLoggingWrite(
@@ -382,7 +380,7 @@ void Trace::WorkArea::MoveOrResizeEnd(_In_opt_ Layout* activeLayout, _In_opt_ La
         TraceLoggingValue(zoneInfo.NumberOfWindows, NumberOfWindowsKey));
 }
 
-void Trace::WorkArea::CycleActiveZoneSet(_In_opt_ Layout* activeLayout, _In_opt_ LayoutAssignedWindows* layoutWindows, InputMode mode) noexcept
+void Trace::WorkArea::CycleActiveZoneSet(_In_opt_ Layout* activeLayout, const LayoutAssignedWindows& layoutWindows, InputMode mode) noexcept
 {
     auto const zoneInfo = GetZoneSetInfo(activeLayout, layoutWindows);
     TraceLoggingWrite(

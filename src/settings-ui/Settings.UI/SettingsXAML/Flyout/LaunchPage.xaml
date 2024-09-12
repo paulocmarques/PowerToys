@@ -5,9 +5,10 @@
     xmlns:animatedVisuals="using:Microsoft.UI.Xaml.Controls.AnimatedVisuals"
     xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:Microsoft.PowerToys.Settings.UI.Flyout"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:toolkitControls="using:CommunityToolkit.WinUI.UI.Controls"
+    xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
+    xmlns:tkconverters="using:CommunityToolkit.WinUI.Converters"
+    xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:viewModels="using:Microsoft.PowerToys.Settings.UI.ViewModels"
     mc:Ignorable="d">
     <Page.Resources>
@@ -20,6 +21,8 @@
             <Setter Property="Height" Value="32" />
             <Setter Property="FontFamily" Value="{ThemeResource SymbolThemeFontFamily}" />
         </Style>
+
+        <tkconverters:StringVisibilityConverter x:Key="StringVisibilityConverter" />
     </Page.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -37,14 +40,14 @@
 
             <Grid Padding="36,32,36,0">
                 <TextBlock
+                    x:Uid="QuickAccessTxt"
                     VerticalAlignment="Center"
-                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                    x:Uid="ShortcutsTxt" />
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                 <Button
+                    x:Uid="MoreBtn"
                     Padding="8,4,8,4"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
-                    x:Uid="MoreBtn"
                     Click="AllAppButton_Click">
                     <Button.Content>
                         <StackPanel
@@ -52,7 +55,7 @@
                             Orientation="Horizontal"
                             Spacing="12">
 
-                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" x:Uid="MoreLabel" />
+                            <TextBlock x:Uid="MoreLabel" Style="{StaticResource CaptionTextBlockStyle}" />
                             <FontIcon
                                 Margin="0,2,0,0"
                                 FontSize="12"
@@ -62,43 +65,47 @@
                 </Button>
             </Grid>
             <Grid Grid.Row="1">
-                <ItemsControl
-                    Margin="12,26,12,24"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    ItemsSource="{x:Bind ViewModel.FlyoutMenuItems}"
-                    TabNavigation="Local">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <toolkitControls:WrapPanel VerticalSpacing="12" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="viewModels:FlyoutMenuItem">
-                            <controls:FlyoutMenuButton
-                                Click="ModuleButton_Click"
-                                Tag="{x:Bind Tag}"
-                                AutomationProperties.Name="{x:Bind Label}"
-                                ToolTipService.ToolTip="{x:Bind ToolTip}"
-                                Visibility="{x:Bind Visible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <controls:FlyoutMenuButton.Content>
-                                    <TextBlock
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{x:Bind Label}"
-                                        TextAlignment="Center"
-                                        TextWrapping="Wrap" />
-                                </controls:FlyoutMenuButton.Content>
-                                <controls:FlyoutMenuButton.Icon>
-                                    <Image>
-                                        <Image.Source>
-                                            <BitmapImage UriSource="{x:Bind Icon, Mode=OneWay}" />
-                                        </Image.Source>
-                                    </Image>
-                                </controls:FlyoutMenuButton.Icon>
-                            </controls:FlyoutMenuButton>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ScrollViewer>
+                    <ItemsControl
+                        Margin="12,26,12,24"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Top"
+                        ItemsSource="{x:Bind ViewModel.FlyoutMenuItems}"
+                        TabNavigation="Local">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <tkcontrols:WrapPanel HorizontalAlignment="Stretch" VerticalSpacing="12" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:FlyoutMenuItem">
+                                <controls:FlyoutMenuButton
+                                    AutomationProperties.Name="{x:Bind Label}"
+                                    Click="ModuleButton_Click"
+                                    Tag="{x:Bind Tag}"
+                                    Visibility="{x:Bind Visible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <controls:FlyoutMenuButton.Content>
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind Label}"
+                                            TextAlignment="Center"
+                                            TextWrapping="Wrap" />
+                                    </controls:FlyoutMenuButton.Content>
+                                    <controls:FlyoutMenuButton.Icon>
+                                        <Image>
+                                            <Image.Source>
+                                                <BitmapImage UriSource="{x:Bind Icon, Mode=OneWay}" />
+                                            </Image.Source>
+                                        </Image>
+                                    </controls:FlyoutMenuButton.Icon>
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="{x:Bind ToolTip}" Visibility="{x:Bind ToolTip, Converter={StaticResource StringVisibilityConverter}}" />
+                                    </ToolTipService.ToolTip>
+                                </controls:FlyoutMenuButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Grid>
         <Grid Grid.Row="2">
@@ -118,30 +125,32 @@
                     x:Name="DocsBtn"
                     x:Uid="DocsBtn"
                     Click="DocsBtn_Click"
+                    Content="{ui:FontIcon Glyph=&#xE8A5;,
+                                          FontSize=16}"
                     Style="{StaticResource FlyoutButtonStyle}">
                     <ToolTipService.ToolTip>
-                        <TextBlock x:Uid="DocsTooltip"/>
+                        <TextBlock x:Uid="DocsTooltip" />
                     </ToolTipService.ToolTip>
-                    <FontIcon FontSize="16" Glyph="&#xE8A5;" />
                 </Button>
                 <Button
                     x:Name="ReportBugBtn"
                     x:Uid="BugReportBtn"
                     Click="ReportBugBtn_Click"
+                    Content="{ui:FontIcon Glyph=&#xebe8;,
+                                          FontSize=16}"
                     Style="{StaticResource FlyoutButtonStyle}">
                     <ToolTipService.ToolTip>
-                        <TextBlock x:Uid="BugReportTooltip"/>
+                        <TextBlock x:Uid="BugReportTooltip" />
                     </ToolTipService.ToolTip>
-                    <FontIcon FontSize="16" Glyph="&#xebe8;" />
                 </Button>
                 <Button
                     x:Name="SettingsBtn"
-                    Padding="8"
                     x:Uid="SettingsBtn"
+                    Padding="8"
                     Click="SettingsBtn_Click"
                     Style="{StaticResource FlyoutButtonStyle}">
                     <ToolTipService.ToolTip>
-                        <TextBlock x:Uid="SettingsTooltip"/>
+                        <TextBlock x:Uid="SettingsTooltip" />
                     </ToolTipService.ToolTip>
                     <AnimatedIcon x:Name="SearchAnimatedIcon">
                         <AnimatedIcon.Source>

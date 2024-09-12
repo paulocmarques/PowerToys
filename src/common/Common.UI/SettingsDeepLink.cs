@@ -27,6 +27,11 @@ namespace Common.UI
             MeasureTool,
             PowerOCR,
             RegistryPreview,
+            CropAndLock,
+            EnvironmentVariables,
+            Dashboard,
+            AdvancedPaste,
+            Workspaces,
         }
 
         private static string SettingsWindowNameToString(SettingsWindow value)
@@ -62,9 +67,19 @@ namespace Common.UI
                 case SettingsWindow.MeasureTool:
                     return "MeasureTool";
                 case SettingsWindow.PowerOCR:
-                    return "PowerOCR";
+                    return "PowerOcr";
                 case SettingsWindow.RegistryPreview:
                     return "RegistryPreview";
+                case SettingsWindow.CropAndLock:
+                    return "CropAndLock";
+                case SettingsWindow.EnvironmentVariables:
+                    return "EnvironmentVariables";
+                case SettingsWindow.Dashboard:
+                    return "Dashboard";
+                case SettingsWindow.AdvancedPaste:
+                    return "AdvancedPaste";
+                case SettingsWindow.Workspaces:
+                    return "Workspaces";
                 default:
                     {
                         return string.Empty;

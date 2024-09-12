@@ -8,11 +8,9 @@ using System.Threading.Tasks;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.OOBE.Views;
 using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Storage.Pickers;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
 {
@@ -73,7 +71,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 loader.GetString("GeneralSettings_RunningAsUserText"),
                 ShellPage.IsElevated,
                 ShellPage.IsUserAnAdmin,
-                UpdateUIThemeMethod,
                 ShellPage.SendDefaultIPCMessage,
                 ShellPage.SendRestartAdminIPCMessage,
                 ShellPage.SendCheckForUpdatesIPCMessage,
@@ -89,34 +86,16 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             doRefreshBackupRestoreStatus(100);
         }
 
-        public static int UpdateUIThemeMethod(string themeName)
-        {
-            switch (themeName?.ToUpperInvariant())
-            {
-                case "LIGHT":
-                    // OobeShellPage.OobeShellHandler.RequestedTheme = ElementTheme.Light;
-                    ShellPage.ShellHandler.RequestedTheme = ElementTheme.Light;
-                    break;
-                case "DARK":
-                    // OobeShellPage.OobeShellHandler.RequestedTheme = ElementTheme.Dark;
-                    ShellPage.ShellHandler.RequestedTheme = ElementTheme.Dark;
-                    break;
-                case "SYSTEM":
-                    // OobeShellPage.OobeShellHandler.RequestedTheme = ElementTheme.Default;
-                    ShellPage.ShellHandler.RequestedTheme = ElementTheme.Default;
-                    break;
-                default:
-                    Logger.LogError($"Unexpected theme name: {themeName}");
-                    break;
-            }
-
-            App.HandleThemeChange();
-            return 0;
-        }
-
         private void OpenColorsSettings_Click(object sender, RoutedEventArgs e)
         {
-            Helpers.StartProcessHelper.Start(Helpers.StartProcessHelper.ColorsSettings);
+            try
+            {
+                Helpers.StartProcessHelper.Start(Helpers.StartProcessHelper.ColorsSettings);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error while trying to open the system color settings", ex);
+            }
         }
 
         private void RefreshBackupRestoreStatus(int delayMs = 0)

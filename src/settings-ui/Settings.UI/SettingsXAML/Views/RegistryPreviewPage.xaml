@@ -3,45 +3,41 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls"
-    xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:labs="using:CommunityToolkit.Labs.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ui="using:CommunityToolkit.WinUI.UI"
+    xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
     AutomationProperties.LandmarkType="Main"
     mc:Ignorable="d">
 
     <controls:SettingsPageControl x:Uid="RegistryPreview" ModuleImageSource="ms-appx:///Assets/Settings/Modules/RegistryPreview.png">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                <labs:SettingsCard
+                <tkcontrols:SettingsCard
                     x:Uid="RegistryPreview_Enable_RegistryPreview"
-                    HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/FluentIcons/FluentIconsRegistryPreview.png}"
-                    IsEnabled="{x:Bind Mode=OneWay, Path=ViewModel.IsEnabledGpoConfigured, Converter={StaticResource BoolNegationConverter}}">
+                    HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/RegistryPreview.png}"
+                    IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
                     <ToggleSwitch IsOn="{x:Bind ViewModel.IsRegistryPreviewEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </labs:SettingsCard>
+                </tkcontrols:SettingsCard>
 
                 <InfoBar
-                    x:Uid="GPO_IsSettingForced"
+                    x:Uid="GPO_SettingIsManaged"
                     IsClosable="False"
-                    IsOpen="{x:Bind Mode=OneWay, Path=ViewModel.IsEnabledGpoConfigured}"
-                    IsTabStop="{x:Bind Mode=OneWay, Path=ViewModel.IsEnabledGpoConfigured}"
+                    IsOpen="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}"
+                    IsTabStop="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}"
                     Severity="Informational" />
 
-                <controls:SettingsGroup x:Uid="RegistryPreview_Launch_GroupSettings" IsEnabled="{x:Bind Mode=OneWay, Path=ViewModel.IsRegistryPreviewEnabled}">
-                    <labs:SettingsCard
+                <controls:SettingsGroup x:Uid="RegistryPreview_Launch_GroupSettings" IsEnabled="{x:Bind ViewModel.IsRegistryPreviewEnabled, Mode=OneWay}">
+                    <tkcontrols:SettingsCard
                         x:Uid="RegistryPreview_LaunchButtonControl"
-                        ActionIcon="{ui:FontIcon FontFamily={StaticResource SymbolThemeFontFamily},
-                                                 FontSize=14,
-                                                 Glyph=&#xE8A7;}"
+                        ActionIcon="{ui:FontIcon Glyph=&#xE8A7;}"
                         Command="{x:Bind ViewModel.LaunchEventHandler}"
-                        HeaderIcon="{ui:FontIcon FontFamily={StaticResource SymbolThemeFontFamily},
-                                                 Glyph=&#xEA37;}"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xEA37;}"
                         IsClickEnabled="True" />
 
-                    <labs:SettingsCard x:Uid="RegistryPreview_DefaultRegApp" HeaderIcon="{ui:FontIcon FontFamily={StaticResource SymbolThemeFontFamily}, Glyph=&#xE7AC;}">
-                        <ToggleSwitch x:Uid="RegistryPreview_DefaultRegApp_ToggleSwitch" IsOn="{x:Bind Mode=TwoWay, Path=ViewModel.IsRegistryPreviewDefaultRegApp}" />
-                    </labs:SettingsCard>
+                    <tkcontrols:SettingsCard x:Uid="RegistryPreview_DefaultRegApp" HeaderIcon="{ui:FontIcon Glyph=&#xE7AC;}">
+                        <ToggleSwitch x:Uid="RegistryPreview_DefaultRegApp_ToggleSwitch" IsOn="{x:Bind ViewModel.IsRegistryPreviewDefaultRegApp, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
                 </controls:SettingsGroup>
 
             </StackPanel>

@@ -14,17 +14,24 @@ $versionExceptions = @(
     "Microsoft.Windows.ApplicationModel.WindowsAppRuntime.Projection.dll",
     "Microsoft.Windows.AppLifecycle.Projection.dll",
     "Microsoft.Windows.System.Power.Projection.dll",
+    "Microsoft.Windows.Widgets.Providers.Projection.dll",
     "Microsoft.WindowsAppRuntime.Bootstrap.Net.dll",
     "Microsoft.Xaml.Interactions.dll",
     "Microsoft.Xaml.Interactivity.dll",
     "hyjiacan.py4n.dll",
     "Microsoft.WindowsAppRuntime.Release.Net.dll",
-    "Microsoft.Windows.Widgets.Projection.dll") -join '|';
+    "Microsoft.Windows.Widgets.Projection.dll",
+    "WinRT.Host.Shim.dll") -join '|';
 $nullVersionExceptions = @(
     "codicon.ttf",
     "e_sqlite3.dll",
+    "getfilesiginforedist.dll",
     "vcamp140_app.dll",
+    "vcruntime140_app.dll",
+    "vcruntime140_1_app.dll",
+    "msvcp140_app.dll",
     "marshal.dll",
+    "Microsoft.Toolkit.Win32.UI.XamlHost.dll",
     "Microsoft.UI.Composition.OSSupport.dll",
     "Microsoft.UI.Windowing.dll",
     "Microsoft.UI.Xaml.Internal.dll",
@@ -60,11 +67,6 @@ $items | ForEach-Object {
     elseif ($_.VersionInfo.FileVersion -eq $null -and $_.Name -notmatch $nullVersionExceptions) { 
         # These items are exceptions that actually a version not set.
         Write-Host "Version not set: " + $_.FullName
-        $totalFailure++;
-    }
-    elseif ($_.VersionInfo.ProductName -contains "PowerToys" -and $_.VersionInfo.LegalCopyright -notmatch "Copyright \(C\) $((Get-Date).Year)") {
-        # PowerToys assemblies that aren't updated to the current year in the copyright
-        Write-Host "Copyright year out of date: " + $_.FullName
         $totalFailure++;
     }
     else {

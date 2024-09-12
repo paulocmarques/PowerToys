@@ -8,11 +8,12 @@
 #include <common/utils/string_utils.h>
 #include <common/utils/process_path.h>
 #include <common/utils/excluded_apps.h>
+#include <common/utils/game_mode.h>
 
 namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
 {
     KeyboardListener::KeyboardListener() :
-        m_toolbarVisible(false), m_triggeredWithSpace(false), m_leftShiftPressed(false), m_rightShiftPressed(false)
+        m_toolbarVisible(false), m_triggeredWithSpace(false), m_leftShiftPressed(false), m_rightShiftPressed(false), m_triggeredWithLeftArrow(false), m_triggeredWithRightArrow(false)
     {
         s_instance = this;
         LoggerHelpers::init_logger(L"PowerAccent", L"PowerAccentKeyboardService", "PowerAccent");
@@ -85,6 +86,11 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
         m_settings.activationKey = static_cast<PowerAccentActivationKey>(activationKey);
     }
 
+    void KeyboardListener::UpdateDoNotActivateOnGameMode(bool doNotActivateOnGameMode)
+    {
+        m_settings.doNotActivateOnGameMode = doNotActivateOnGameMode;
+    }
+
     void KeyboardListener::UpdateInputTime(int32_t inputTime)
     {
         m_settings.inputTime = std::chrono::milliseconds(inputTime);
@@ -110,6 +116,11 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
             m_settings.excludedApps = std::move(excludedApps);
             m_prevForegroundAppExcl = { NULL, false };
         }
+    }
+
+    bool KeyboardListener::IsSuppressedByGameMode()
+    {
+        return m_settings.doNotActivateOnGameMode && detect_game_mode();
     }
 
     bool KeyboardListener::IsForegroundAppExcluded()
@@ -174,18 +185,20 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
                     (triggerPressed == VK_SPACE && m_settings.activationKey == PowerAccentActivationKey::LeftRightArrow) ||
                     ((triggerPressed == VK_LEFT || triggerPressed == VK_RIGHT) && m_settings.activationKey == PowerAccentActivationKey::Space))
                 {
-                    triggerPressed = 0;
                     Logger::debug(L"Reset trigger key");
+                    return false;
                 }
             }
         }
 
-        if (!m_toolbarVisible && letterPressed != LetterKey::None && triggerPressed && !IsForegroundAppExcluded())
+        if (!m_toolbarVisible && letterPressed != LetterKey::None && triggerPressed && !IsSuppressedByGameMode() && !IsForegroundAppExcluded())
         {
             Logger::debug(L"Show toolbar. Letter: {}, Trigger: {}", letterPressed, triggerPressed);
 
             // Keep track if it was triggered with space so that it can be typed on false starts.
             m_triggeredWithSpace = triggerPressed == VK_SPACE;
+            m_triggeredWithLeftArrow = triggerPressed == VK_LEFT;
+            m_triggeredWithRightArrow = triggerPressed == VK_RIGHT;
             m_toolbarVisible = true;
             m_showToolbarCb(letterPressed);
         }
@@ -240,6 +253,14 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
                     if (m_triggeredWithSpace)
                     {
                         m_hideToolbarCb(InputType::Space);
+                    }
+                    else if (m_triggeredWithLeftArrow)
+                    {
+                        m_hideToolbarCb(InputType::Left);
+                    }
+                    else if (m_triggeredWithRightArrow)
+                    {
+                        m_hideToolbarCb(InputType::Right);
                     }
                     else
                     {

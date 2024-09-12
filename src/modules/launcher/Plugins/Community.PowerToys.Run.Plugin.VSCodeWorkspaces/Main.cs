@@ -23,6 +23,8 @@ namespace Community.PowerToys.Run.Plugin.VSCodeWorkspaces
 
         public string Description => GetTranslatedPluginDescription();
 
+        public static string PluginID => "525995402BEF4A8CA860D92F6D108092";
+
         public Main()
         {
             VSCodeInstances.LoadVSCodeInstances();
@@ -136,7 +138,7 @@ namespace Community.PowerToys.Run.Plugin.VSCodeWorkspaces
                 });
             }
 
-            results = results.Where(a => a.Title.ToLowerInvariant().Contains(query.Search.ToLowerInvariant())).ToList();
+            results = results.Where(a => a.Title.Contains(query.Search, StringComparison.InvariantCultureIgnoreCase)).ToList();
 
             results.ForEach(x =>
                     {

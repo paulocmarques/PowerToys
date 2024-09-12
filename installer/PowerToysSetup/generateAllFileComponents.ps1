@@ -24,6 +24,10 @@ Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListNa
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName WinUI3ApplicationsFiles -wxsFilePath $PSScriptRoot\WinUI3Applications.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""WinUI3ApplicationsFiles"" -wxsFilePath $PSScriptRoot\WinUI3Applications.wxs -regroot $registryroot"
 
+#AdvancedPaste
+Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName AdvancedPasteAssetsFiles -wxsFilePath $PSScriptRoot\AdvancedPaste.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\AdvancedPaste"""
+Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""AdvancedPasteAssetsFiles"" -wxsFilePath $PSScriptRoot\AdvancedPaste.wxs -regroot $registryroot"
+
 #AwakeFiles
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName AwakeImagesFiles -wxsFilePath $PSScriptRoot\Awake.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\Assets\Awake"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""AwakeImagesFiles"" -wxsFilePath $PSScriptRoot\Awake.wxs -regroot $registryroot"
@@ -31,6 +35,10 @@ Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListNa
 #ColorPicker
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName ColorPickerAssetsFiles -wxsFilePath $PSScriptRoot\ColorPicker.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\Assets\ColorPicker"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""ColorPickerAssetsFiles"" -wxsFilePath $PSScriptRoot\ColorPicker.wxs -regroot $registryroot"
+
+#Environment Variables
+Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName EnvironmentVariablesAssetsFiles -wxsFilePath $PSScriptRoot\EnvironmentVariables.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\EnvironmentVariables"""
+Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""EnvironmentVariablesAssetsFiles"" -wxsFilePath $PSScriptRoot\EnvironmentVariables.wxs -regroot $registryroot"
 
 #FileExplorerAdd-ons
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName MonacoPreviewHandlerMonacoAssetsFiles -wxsFilePath $PSScriptRoot\FileExplorerPreview.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\Assets\Monaco"""
@@ -176,7 +184,7 @@ Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListNa
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName SettingsV2AssetsFiles -wxsFilePath $PSScriptRoot\Settings.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\Settings\"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName SettingsV2AssetsModulesFiles -wxsFilePath $PSScriptRoot\Settings.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\Settings\Modules\"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName SettingsV2OOBEAssetsModulesFiles -wxsFilePath $PSScriptRoot\Settings.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\Settings\Modules\OOBE\"""
-Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName SettingsV2OOBEAssetsFluentIconsFiles -wxsFilePath $PSScriptRoot\Settings.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\Settings\FluentIcons\"""
+Invoke-Expression -Command "$PSScriptRoot\generateFileList.ps1 -fileDepsJson """" -fileListName SettingsV2OOBEAssetsFluentIconsFiles -wxsFilePath $PSScriptRoot\Settings.wxs -depsPath ""$PSScriptRoot..\..\..\$platform\Release\WinUI3Apps\Assets\Settings\Icons\"""
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""SettingsV2AssetsFiles"" -wxsFilePath $PSScriptRoot\Settings.wxs -regroot $registryroot"
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""SettingsV2AssetsModulesFiles"" -wxsFilePath $PSScriptRoot\Settings.wxs -regroot $registryroot"
 Invoke-Expression -Command "$PSScriptRoot\generateFileComponents.ps1 -fileListName ""SettingsV2OOBEAssetsModulesFiles"" -wxsFilePath $PSScriptRoot\Settings.wxs -regroot $registryroot"

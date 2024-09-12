@@ -37,10 +37,12 @@ namespace Microsoft.Plugin.Program
 
         public string Description => Properties.Resources.wox_plugin_program_plugin_description;
 
+        public static string PluginID => "791FC278BA414111B8D1886DFE447410";
+
         private static PluginInitContext _context;
         private readonly PluginJsonStorage<ProgramPluginSettings> _settingsStorage;
         private bool _disposed;
-        private PackageRepository _packageRepository = new PackageRepository(new PackageCatalogWrapper());
+        private PackageRepository _packageRepository;
         private static Win32ProgramFileSystemWatchers _win32ProgramRepositoryHelper;
         private static Win32ProgramRepository _win32ProgramRepository;
 
@@ -89,7 +91,7 @@ namespace Microsoft.Plugin.Program
                 .Where(r => r?.Score > 0)
                 .ToArray();
 
-            if (result.Any())
+            if (result.Length != 0)
             {
                 var maxScore = result.Max(x => x.Score);
                 return result
@@ -103,6 +105,7 @@ namespace Microsoft.Plugin.Program
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _context.API.ThemeChanged += OnThemeChanged;
+            _packageRepository = new PackageRepository(new PackageCatalogWrapper(), _context);
 
             var a = Task.Run(() =>
             {
@@ -127,9 +130,12 @@ namespace Microsoft.Plugin.Program
 
         public void UpdateUWPIconPath(Theme theme)
         {
-            foreach (UWPApplication app in _packageRepository)
+            if (_packageRepository != null)
             {
-                app.UpdatePath(theme);
+                foreach (UWPApplication app in _packageRepository)
+                {
+                    app.UpdateLogoPath(theme);
+                }
             }
         }
 
@@ -155,10 +161,7 @@ namespace Microsoft.Plugin.Program
 
         public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
         {
-            if (selectedResult == null)
-            {
-                throw new ArgumentNullException(nameof(selectedResult));
-            }
+            ArgumentNullException.ThrowIfNull(selectedResult);
 
             var menuOptions = new List<ContextMenuResult>();
             if (selectedResult.ContextData is IProgram program)
@@ -173,15 +176,9 @@ namespace Microsoft.Plugin.Program
         {
             try
             {
-                if (runProcess == null)
-                {
-                    throw new ArgumentNullException(nameof(runProcess));
-                }
+                ArgumentNullException.ThrowIfNull(runProcess);
 
-                if (info == null)
-                {
-                    throw new ArgumentNullException(nameof(info));
-                }
+                ArgumentNullException.ThrowIfNull(info);
 
                 runProcess(info);
             }

@@ -34,6 +34,16 @@ namespace FancyZonesUtils
         RECT m_rect{};
     };
 
+    inline bool operator==(const FancyZonesUtils::Rect& left, const FancyZonesUtils::Rect& right)
+    {
+        return left.left() == right.left() && left.right() == right.right() && left.top() == right.top() && left.bottom() == right.bottom();
+    }
+
+    inline bool operator!=(const FancyZonesUtils::Rect& left, const FancyZonesUtils::Rect& right)
+    {
+        return left.left() != right.left() || left.right() != right.right() || left.top() != right.top() || left.bottom() != right.bottom();
+    }
+
     inline void InitRGB(_Out_ RGBQUAD* quad, BYTE alpha, COLORREF color)
     {
         ZeroMemory(quad, sizeof(*quad));
@@ -143,13 +153,12 @@ namespace FancyZonesUtils
     }
 
     template<RECT MONITORINFO::*member>
-    RECT GetAllMonitorsCombinedRect()
+    RECT GetMonitorsCombinedRect(const std::vector<std::pair<HMONITOR, RECT>>& monitorRects)
     {
-        auto allMonitors = GetAllMonitorRects<member>();
         bool empty = true;
         RECT result{ 0, 0, 0, 0 };
 
-        for (auto& [monitor, rect] : allMonitors)
+        for (auto& [monitor, rect] : monitorRects)
         {
             if (empty)
             {
@@ -166,6 +175,13 @@ namespace FancyZonesUtils
         }
 
         return result;
+    }
+
+    template<RECT MONITORINFO::*member>
+    RECT GetAllMonitorsCombinedRect()
+    {
+        auto allMonitors = GetAllMonitorRects<member>();
+        return GetMonitorsCombinedRect<member>(allMonitors);
     }
 
     constexpr RECT PrepareRectForCycling(RECT windowRect, RECT workAreaRect, DWORD vkCode) noexcept
@@ -196,6 +212,7 @@ namespace FancyZonesUtils
 
     UINT GetDpiForMonitor(HMONITOR monitor) noexcept;
     void OrderMonitors(std::vector<std::pair<HMONITOR, RECT>>& monitorInfo);
+    std::vector<HMONITOR> GetMonitorsOrdered();
 
     bool IsValidGuid(const std::wstring& str);
     std::optional<GUID> GuidFromString(const std::wstring& str) noexcept;

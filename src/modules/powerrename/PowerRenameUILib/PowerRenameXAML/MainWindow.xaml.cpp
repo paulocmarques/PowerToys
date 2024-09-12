@@ -21,6 +21,7 @@
 
 #include "microsoft.ui.xaml.window.h"
 #include <winrt/Microsoft.UI.Interop.h>
+#include <winrt/Windows.UI.ViewManagement.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <common/Themes/theme_helpers.h>
 #include <common/Themes/theme_listener.h>
@@ -133,8 +134,7 @@ namespace winrt::PowerRenameUI::implementation
             GetDpiForMonitor(hMonitor, MONITOR_DPI_TYPE::MDT_EFFECTIVE_DPI, &x_dpi, &x_dpi);
             UINT window_dpi = GetDpiForWindow(m_window);
 
-            int width = 1400;
-            int height = 800;
+            const auto& [width, height] = LastRunSettingsInstance().GetLastWindowSize();
 
             winrt::Windows::Graphics::RectInt32 rect;
             // Scale window size
@@ -169,8 +169,8 @@ namespace winrt::PowerRenameUI::implementation
         m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L".", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchAny").ValueAsString()));
         m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\d", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchDigit").ValueAsString()));
         m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\D", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchNonDigit").ValueAsString()));
-        m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\w", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchNonWS").ValueAsString()));
-        m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\S", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchWordChar").ValueAsString()));
+        m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\w", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchWordChar").ValueAsString()));
+        m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\S", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchNonWS").ValueAsString()));
         m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\S+", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchOneOrMoreWS").ValueAsString()));
         m_searchRegExShortcuts.Append(winrt::make<PatternSnippet>(L"\\b", manager.MainResourceMap().GetValue(L"Resources/RegExCheatSheet_MatchWordBoundary").ValueAsString()));
 
@@ -195,6 +195,19 @@ namespace winrt::PowerRenameUI::implementation
         m_dateTimeShortcuts.Append(winrt::make<PatternSnippet>(L"$fff", manager.MainResourceMap().GetValue(L"Resources/DateTimeCheatSheet_MilliSeconds3D").ValueAsString()));
         m_dateTimeShortcuts.Append(winrt::make<PatternSnippet>(L"$ff", manager.MainResourceMap().GetValue(L"Resources/DateTimeCheatSheet_MilliSeconds2D").ValueAsString()));
         m_dateTimeShortcuts.Append(winrt::make<PatternSnippet>(L"$f", manager.MainResourceMap().GetValue(L"Resources/DateTimeCheatSheet_MilliSeconds1D").ValueAsString()));
+
+        m_CounterShortcuts = winrt::single_threaded_observable_vector<PowerRenameUI::PatternSnippet>();
+        m_CounterShortcuts.Append(winrt::make<PatternSnippet>(L"${}", manager.MainResourceMap().GetValue(L"Resources/CounterCheatSheet_Simple").ValueAsString()));
+        m_CounterShortcuts.Append(winrt::make<PatternSnippet>(L"${start=10}", manager.MainResourceMap().GetValue(L"Resources/CounterCheatSheet_Start").ValueAsString()));
+        m_CounterShortcuts.Append(winrt::make<PatternSnippet>(L"${increment=5}", manager.MainResourceMap().GetValue(L"Resources/CounterCheatSheet_Increment").ValueAsString()));
+        m_CounterShortcuts.Append(winrt::make<PatternSnippet>(L"${padding=8}", manager.MainResourceMap().GetValue(L"Resources/CounterCheatSheet_Padding").ValueAsString()));
+        m_CounterShortcuts.Append(winrt::make<PatternSnippet>(L"${increment=3,padding=4,start=900}", manager.MainResourceMap().GetValue(L"Resources/CounterCheatSheet_Complex").ValueAsString()));
+
+        m_RandomizerShortcuts = winrt::single_threaded_observable_vector<PowerRenameUI::PatternSnippet>();
+        m_RandomizerShortcuts.Append(winrt::make<PatternSnippet>(L"${rstringalnum=9}", manager.MainResourceMap().GetValue(L"Resources/RandomizerCheatSheet_Alnum").ValueAsString()));
+        m_RandomizerShortcuts.Append(winrt::make<PatternSnippet>(L"${rstringalpha=13}", manager.MainResourceMap().GetValue(L"Resources/RandomizerCheatSheet_Alpha").ValueAsString()));
+        m_RandomizerShortcuts.Append(winrt::make<PatternSnippet>(L"${rstringdigit=36}", manager.MainResourceMap().GetValue(L"Resources/RandomizerCheatSheet_Digit").ValueAsString()));
+        m_RandomizerShortcuts.Append(winrt::make<PatternSnippet>(L"${ruuidv4}", manager.MainResourceMap().GetValue(L"Resources/RandomizerCheatSheet_Uuid").ValueAsString()));
 
         InitializeComponent();
 
@@ -275,9 +288,31 @@ namespace winrt::PowerRenameUI::implementation
         }
 
         button_rename().IsEnabled(false);
+        toggleButton_enumItems().IsChecked(true);
+        toggleButton_randItems().IsChecked(false);
         InitAutoComplete();
         SearchReplaceChanged();
         InvalidateItemListViewState();
+
+        SizeChanged({ this, &MainWindow::OnSizeChanged });
+        Closed({ this, &MainWindow::OnClosed });
+    }
+
+    void MainWindow::OnSizeChanged(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::WindowSizeChangedEventArgs const& /*args*/)
+    {
+        const auto appWindow =
+            Microsoft::UI::Windowing::AppWindow::GetFromWindowId(Microsoft::UI::GetWindowIdFromWindow(m_window));
+        const auto [width, height] = appWindow.Size();
+
+        m_updatedWindowSize.emplace(std::make_pair(width, height));
+    }
+
+    void MainWindow::OnClosed(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::WindowEventArgs const&)
+    {
+        if (m_updatedWindowSize)
+        {
+            LastRunSettingsInstance().UpdateLastWindowSize(m_updatedWindowSize->first, m_updatedWindowSize->second);
+        }
     }
 
     void MainWindow::InvalidateItemListViewState()
@@ -721,6 +756,15 @@ namespace winrt::PowerRenameUI::implementation
             UpdateFlag(EnumerateItems, UpdateFlagCommand::Reset);
         });
 
+        // CheckBox RandomizeItems
+        toggleButton_randItems().Checked([&](auto const&, auto const&) {
+            ValidateFlags(RandomizeItems);
+            UpdateFlag(RandomizeItems, UpdateFlagCommand::Set);
+        });
+        toggleButton_randItems().Unchecked([&](auto const&, auto const&) {
+            UpdateFlag(RandomizeItems, UpdateFlagCommand::Reset);
+        });
+
         // ButtonSettings
         button_settings().Click([&](auto const&, auto const&) {
             OpenSettingsApp();
@@ -795,8 +839,8 @@ namespace winrt::PowerRenameUI::implementation
         {
             flags = CSettingsInstance().GetFlags();
 
-            textBox_search().Text(CSettingsInstance().GetSearchText().c_str());
-            textBox_replace().Text(CSettingsInstance().GetReplaceText().c_str());
+            textBox_search().Text(LastRunSettingsInstance().GetSearchText().c_str());
+            textBox_replace().Text(LastRunSettingsInstance().GetReplaceText().c_str());
         }
         else
         {
@@ -821,7 +865,7 @@ namespace winrt::PowerRenameUI::implementation
             CSettingsInstance().SetFlags(flags);
 
             winrt::hstring searchTerm = textBox_search().Text();
-            CSettingsInstance().SetSearchText(std::wstring{ searchTerm });
+            LastRunSettingsInstance().SetSearchText(std::wstring{ searchTerm });
 
             if (CSettingsInstance().GetMRUEnabled() && m_searchMRU)
             {
@@ -833,7 +877,7 @@ namespace winrt::PowerRenameUI::implementation
             }
 
             winrt::hstring replaceTerm = textBox_replace().Text();
-            CSettingsInstance().SetReplaceText(std::wstring{ replaceTerm });
+            LastRunSettingsInstance().SetReplaceText(std::wstring{ replaceTerm });
 
             if (CSettingsInstance().GetMRUEnabled() && m_replaceMRU)
             {
@@ -915,6 +959,10 @@ namespace winrt::PowerRenameUI::implementation
         if (flags & EnumerateItems)
         {
             toggleButton_enumItems().IsChecked(true);
+        }
+        if (flags & RandomizeItems)
+        {
+            toggleButton_randItems().IsChecked(true);
         }
         if (flags & ExcludeFiles)
         {

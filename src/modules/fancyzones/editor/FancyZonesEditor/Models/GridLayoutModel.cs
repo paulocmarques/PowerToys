@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using FancyZonesEditorCommon.Data;
 
 namespace FancyZonesEditor.Models
 {
@@ -99,7 +100,7 @@ namespace FancyZonesEditor.Models
             }
         }
 
-        private bool _showSpacing = LayoutSettings.DefaultShowSpacing;
+        private bool _showSpacing = LayoutDefaultSettings.DefaultShowSpacing;
 
         // Spacing - free space between cells
         public int Spacing
@@ -129,7 +130,7 @@ namespace FancyZonesEditor.Models
             get { return 1000; }
         }
 
-        private int _spacing = LayoutSettings.DefaultSpacing;
+        private int _spacing = LayoutDefaultSettings.DefaultSpacing;
 
         public GridLayoutModel()
             : base()
@@ -280,6 +281,8 @@ namespace FancyZonesEditor.Models
 
         public void RestoreTo(GridLayoutModel layout)
         {
+            base.RestoreTo(layout);
+
             int rows = Rows;
             int cols = Columns;
 
@@ -315,7 +318,6 @@ namespace FancyZonesEditor.Models
 
             layout.ShowSpacing = ShowSpacing;
             layout.Spacing = Spacing;
-            layout.SensitivityRadius = SensitivityRadius;
 
             layout.FirePropertyChanged();
         }

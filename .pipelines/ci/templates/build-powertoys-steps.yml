@@ -1,5 +1,10 @@
 parameters:
-  additionalBuildArguments: ''
+  - name: additionalBuildArguments
+    type: string
+    default: ''
+  - name: enableCaching
+    type: boolean
+    default: false
 
 steps:
 - checkout: self
@@ -7,8 +12,21 @@ steps:
   submodules: true
   clean: true
 
+- task: UseDotNet@2
+  displayName: 'Use .NET 6 SDK'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+
 - task: PowerShell@2
-  displayName: Verifying Nuget package versions for PowerToys.sln
+  displayName: Verify XAML formatting
+  inputs:
+    filePath: '$(build.sourcesdirectory)\.pipelines\applyXamlStyling.ps1'
+    arguments: -Passive
+    pwsh: true
+
+- task: PowerShell@2
+  displayName: Verify Nuget package versions for PowerToys.sln
   inputs:
     filePath: '$(build.sourcesdirectory)\.pipelines\verifyNugetPackages.ps1'
     arguments: -solution '$(build.sourcesdirectory)\PowerToys.sln'
@@ -49,45 +67,63 @@ steps:
     arguments: -solution '$(build.sourcesdirectory)\installer\PowerToysSetup.sln'
     pwsh: true
 
+- task: PowerShell@2
+  displayName: Verify and set latest VCToolsVersion usage
+  inputs:
+    filePath: '$(build.sourcesdirectory)\.pipelines\verifyAndSetLatestVCToolsVersion.ps1'
+    pwsh: true
+
 - task: UseDotNet@2
-  displayName: 'Use .NET 7 SDK'
+  displayName: 'Use .NET 8 SDK'
   inputs:
     packageType: sdk
-    version: '7.x'
-
-- task: NuGetToolInstaller@1
-  displayName: Ensure NuGet Installer
+    version: '8.x'
+    includePreviewVersions: true
 
 - task: VisualStudioTestPlatformInstaller@1
   displayName: Ensure VSTest Platform
 
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for PowerToys.sln
+- task: Cache@2
+  displayName: 'Cache nuget packages (PackageReference)'
   inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: PowerToys.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\packages'
+    key: '"PackageReference" | "$(Agent.OS)" | Directory.Packages.props'
+    restoreKeys: |
+       "PackageReference" | "$(Agent.OS)"
+       "PackageReference"
+    path: $(NUGET_PACKAGES)
+
+- task: Cache@2
+  displayName: 'Cache nuget packages (packages.config)'
+  inputs:
+    key: '"packages.config" | "$(Agent.OS)" | **/packages.config'
+    restoreKeys: |
+       "packages.config" | "$(Agent.OS)"
+       "packages.config"
+    path: packages
+
+- ${{ if eq(parameters.enableCaching, true) }}:
+  - task: NuGetToolInstaller@1
+    displayName: Install NuGet
+
+  - script: nuget restore packages.config -SolutionDirectory .
+    displayName: 'nuget restore packages.config'
 
 - task: VSBuild@1
-  displayName: 'Build PowerToys.sln'
+  displayName: 'Build and Test PowerToys.sln'
   inputs:
     solution: '**\PowerToys.sln'
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: ${{ parameters.additionalBuildArguments }}
+    ${{ if eq(parameters.enableCaching, true) }}:
+      msbuildArgs: -restore ${{ parameters.additionalBuildArguments }} -t:Build;Test -graph -reportfileaccesses -p:MSBuildCacheEnabled=true -p:MSBuildCacheLogDirectory=$(Build.ArtifactStagingDirectory)\logs\MSBuildCache -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToys.binlog -ds:false
+    ${{ else }}:
+      msbuildArgs: -restore ${{ parameters.additionalBuildArguments }} -t:Build;Test -graph -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToys.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
-
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for BugReportTool.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: tools\BugReportTool\BugReportTool.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\tools\BugReportTool\packages'
+  ${{ if eq(parameters.enableCaching, true) }}:
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
 - task: VSBuild@1
   displayName: 'Build BugReportTool.sln'
@@ -96,17 +132,9 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: ${{ parameters.additionalBuildArguments }}
+    msbuildArgs: -restore ${{ parameters.additionalBuildArguments }} -graph -bl:$(Build.ArtifactStagingDirectory)\logs\BugReportTool.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
-
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for WebcamReportTool.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: tools\WebcamReportTool\WebcamReportTool.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\tools\WebcamReportTool\packages'
 
 - task: VSBuild@1
   displayName: 'Build WebcamReportTool.sln'
@@ -115,17 +143,9 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: ${{ parameters.additionalBuildArguments }}
+    msbuildArgs: -restore ${{ parameters.additionalBuildArguments }} -graph -bl:$(Build.ArtifactStagingDirectory)\logs\WebcamReportTool.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
-
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for StylesReportTool.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: tools\StylesReportTool\StylesReportTool.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\tools\StylesReportTool\packages'
 
 - task: VSBuild@1
   displayName: 'Build StylesReportTool.sln'
@@ -134,17 +154,9 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: ${{ parameters.additionalBuildArguments }}
+    msbuildArgs: -restore ${{ parameters.additionalBuildArguments }} -graph -bl:$(Build.ArtifactStagingDirectory)\logs\StylesReportTool.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
-
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for PowerToysSetup.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: installer\PowerToysSetup.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\installer\packages'
 
 - task: PowerShell@2
   displayName: Download and install WiX 3.14 development build
@@ -159,7 +171,8 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: /t:PowerToysInstaller ${{ parameters.additionalBuildArguments }}
+    msbuildArgs: /t:PowerToysInstaller -restore ${{ parameters.additionalBuildArguments }} -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToysSetup-PowerToysInstaller.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
 
 - task: VSBuild@1
@@ -169,8 +182,9 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: /t:PowerToysBootstrapper ${{ parameters.additionalBuildArguments }}
+    msbuildArgs: /t:PowerToysBootstrapper ${{ parameters.additionalBuildArguments }} -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToysSetup-PowerToysBootstrapper.binlog -ds:false
     clean: false
+    msbuildArchitecture: x64
     maximumCpuCount: true
 
 - task: PowerShell@2
@@ -180,15 +194,6 @@ steps:
     script: git clean -xfd  -e *exe -- .\installer\
     pwsh: true
 
-- task: NuGetCommand@2
-  displayName: Restore NuGet packages for PowerToysSetup.sln
-  inputs:
-    command: restore
-    feedsToUse: config
-    configPath: NuGet.config
-    restoreSolution: installer\PowerToysSetup.sln
-    restoreDirectory: '$(Build.SourcesDirectory)\installer\packages'
-
 - task: VSBuild@1
   displayName: 'Build PowerToys per-user MSI'
   inputs:
@@ -196,7 +201,8 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: /t:PowerToysInstaller ${{ parameters.additionalBuildArguments }} /p:PerUser=true
+    msbuildArgs: /t:PowerToysInstaller -restore ${{ parameters.additionalBuildArguments }} /p:PerUser=true -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToysSetup-PowerToysInstaller-PerUser.binlog -ds:false
+    msbuildArchitecture: x64
     maximumCpuCount: true
 
 - task: VSBuild@1
@@ -206,8 +212,9 @@ steps:
     vsVersion: 17.0
     platform: '$(BuildPlatform)'
     configuration: '$(BuildConfiguration)'
-    msbuildArgs: /t:PowerToysBootstrapper ${{ parameters.additionalBuildArguments }} /p:PerUser=true
+    msbuildArgs: /t:PowerToysBootstrapper ${{ parameters.additionalBuildArguments }} /p:PerUser=true -bl:$(Build.ArtifactStagingDirectory)\logs\PowerToysSetup-PowerToysBootstrapper-PerUser.binlog -ds:false
     clean: false
+    msbuildArchitecture: x64
     maximumCpuCount: true
 
 # Check if deps.json files don't reference different dll versions.
@@ -233,44 +240,13 @@ steps:
     arguments: -targetDir '$(build.sourcesdirectory)\$(BuildPlatform)\$(BuildConfiguration)\WinUI3Apps'
     pwsh: true
 
-# directly not doing WinAppDriver testing
-- task: VSTest@2
-  displayName: 'MS Tests'
-  condition: ne(variables['BuildPlatform'], 'arm64') # No arm64 agents to run the tests.
+# Publish test results which ran in MSBuild
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
   inputs:
-    platform: '$(BuildPlatform)'
-    configuration: '$(BuildConfiguration)'
-    testSelector: 'testAssemblies'
-    testAssemblyVer2: |
-      **\UnitTests-GcodeThumbnailProvider.dll
-      **\UnitTests-StlThumbnailProvider.dll
-      **\UnitTests-PdfThumbnailProvider.dll
-      **\Settings.UI.UnitTests.dll
-      **\UnitTests-GcodePreviewHandler.dll
-      **\UnitTests-PdfPreviewHandler.dll
-      **\UnitTests-PreviewHandlerCommon.dll
-      **\Microsoft.PowerToys.Run.Plugin.Registry.UnitTests.dll
-      **\UnitTest-ColorPickerUI.dll
-      **\Microsoft.Interop.Tests.dll
-      **\ImageResizer.Test.dll
-      **\Community.PowerToys.Run.Plugin.UnitConverter.UnitTest.dll
-      **\Community.PowerToys.Run.Plugin.ValueGenerator.UnitTests.dll
-      **\Microsoft.Plugin.Folder.UnitTests.dll
-      **\Microsoft.Plugin.Program.UnitTests.dll
-      **\Microsoft.PowerToys.Run.Plugin.Calculator.UnitTest.dll
-      **\Microsoft.Plugin.Uri.UnitTests.dll
-      **\Wox.Test.dll
-      **\Microsoft.PowerToys.Run.Plugin.System.UnitTests.dll
-      **\Microsoft.PowerToys.Run.Plugin.TimeDate.UnitTests.dll
-      **\Microsoft.Plugin.WindowsTerminal.UnitTests.dll
-      **\Microsoft.Plugin.WindowWalker.UnitTests.dll
-      **\PreviewPaneUnitTests.dll
-      **\UnitTests-SvgThumbnailProvider.dll
-      **\UnitTests-SvgPreviewHandler.dll
-      **\PowerToys.Hosts.Tests.dll
-      **\MouseJumpUI.UnitTests.dll
-      !**\obj\**
-      !**\ref\**
+    testResultsFormat: VSTest
+    testResultsFiles: '**/*.trx'
+  condition: ne(variables['BuildPlatform'],'arm64')
 
 # Native dlls
 - task: VSTest@2
@@ -285,7 +261,6 @@ steps:
       **\KeyboardManagerEditorTest.dll
       **\UnitTests-CommonLib.dll
       **\PowerRenameUnitTests.dll
-      **\powerpreviewTest.dll
       **\UnitTests-FancyZones.dll
       !**\obj\**
 
@@ -297,8 +272,26 @@ steps:
       dotnet list $(build.sourcesdirectory)\src\common\Common.UI\Common.UI.csproj package
 
 - task: PowerShell@2
-  displayName: Verifying Notice.md and Nuget packages match
+  displayName: Verify Notice.md and Nuget packages match
   inputs:
     filePath: '$(build.sourcesdirectory)\.pipelines\verifyNoticeMdAgainstNugetPackages.ps1'
     arguments: -path '$(build.sourcesdirectory)\'
     pwsh: true
+
+- publish: $(Build.ArtifactStagingDirectory)\logs
+  displayName: Publish Logs
+  artifact: '$(System.JobDisplayName) logs'
+  condition: always()
+
+- task: CopyFiles@2
+  displayName: Copy Build Files
+  condition: and(succeeded(), ne(variables['BuildPlatform'],'arm64')) 
+  inputs:
+    sourceFolder: '$(Build.SourcesDirectory)'
+    contents: '$(BuildPlatform)/$(BuildConfiguration)/**/*'
+    targetFolder: '$(Build.ArtifactStagingDirectory)\$(BuildPlatform)\$(BuildConfiguration)'
+
+- publish: $(Build.ArtifactStagingDirectory)\$(BuildPlatform)\$(BuildConfiguration)
+  displayName: Publish Build Artifacts
+  artifact: build-$(BuildPlatform)-$(BuildConfiguration)
+  condition: and(succeeded(), ne(variables['BuildPlatform'],'arm64')) 

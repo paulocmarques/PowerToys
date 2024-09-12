@@ -16,14 +16,14 @@ namespace PowerOCR.Settings
     [Export(typeof(IUserSettings))]
     public class UserSettings : IUserSettings
     {
-        private readonly ISettingsUtils _settingsUtils;
+        private readonly SettingsUtils _settingsUtils;
         private const string PowerOcrModuleName = "TextExtractor";
         private const string DefaultActivationShortcut = "Win + Shift + O";
         private const int MaxNumberOfRetry = 5;
         private const int SettingsReadOnChangeDelayInMs = 300;
 
         private readonly IFileSystemWatcher _watcher;
-        private readonly object _loadingSettingsLock = new object();
+        private readonly object _loadingSettingsLock = new();
 
         [ImportingConstructor]
         public UserSettings(Helpers.IThrottledActionInvoker throttledActionInvoker)
@@ -113,7 +113,7 @@ namespace PowerOCR.Settings
             // var telemetrySettings = new Telemetry.PowerOcrSettings(properties.VisibleColorFormats)
             // {
             //     ActivationShortcut = properties.ActivationShortcut.ToString(),
-            //     ActivationBehaviour = properties.ActivationAction.ToString(),
+            //     ActivationBehavior = properties.ActivationAction.ToString(),
             //     ColorFormatForClipboard = properties.CopiedColorRepresentation.ToString(),
             //     ShowColorName = properties.ShowColorName,
             // };

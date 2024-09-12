@@ -63,14 +63,11 @@ public:
 
     static HRESULT s_CreateInstance(_In_opt_ IUnknown* punkOuter, _In_ REFIID riid, _Outptr_ void** ppv);
 
-    static bool SetEnabled(_In_ bool enabled);
-    static bool IsEnabled();
-
 private:
     ~CPowerRenameMenu();
 
     std::atomic<long> m_refCount = 1;
     HBITMAP m_hbmpIcon = nullptr;
     CComPtr<IDataObject> m_spdo;
-    std::wstring app_name;
+    std::wstring context_menu_caption;
 };

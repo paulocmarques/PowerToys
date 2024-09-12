@@ -3,11 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Text.Json.Serialization;
+using Settings.UI.Library.Attributes;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
 {
     public class MousePointerCrosshairsProperties
     {
+        [CmdConfigureIgnore]
         public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, true, false, 0x50); // Win + Alt + P
 
         [JsonPropertyName("activation_shortcut")]
@@ -40,6 +42,9 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonPropertyName("crosshairs_fixed_length")]
         public IntProperty CrosshairsFixedLength { get; set; }
 
+        [JsonPropertyName("auto_activate")]
+        public BoolProperty AutoActivate { get; set; }
+
         public MousePointerCrosshairsProperties()
         {
             ActivationShortcut = DefaultActivationShortcut;
@@ -52,6 +57,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             CrosshairsAutoHide = new BoolProperty(false);
             CrosshairsIsFixedLengthEnabled = new BoolProperty(false);
             CrosshairsFixedLength = new IntProperty(1);
+            AutoActivate = new BoolProperty(false);
         }
     }
 }

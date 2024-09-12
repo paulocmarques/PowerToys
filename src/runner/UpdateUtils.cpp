@@ -33,7 +33,7 @@ using namespace updating;
 std::wstring CurrentVersionToNextVersion(const new_version_download_info& info)
 {
     auto result = VersionHelper{ VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION }.toWstring();
-    result += L" -> ";
+    result += L" \u2192 "; // Right arrow
     result += info.version.toWstring();
     return result;
 }
@@ -140,9 +140,16 @@ void ProcessNewVersionInfo(const github_version_info& version_info,
         return;
     }
 
-    // Check notification GPO.
-    // We check only if notifications are allowed. This is the case if we are triggered by the periodic check.
-    if (show_notifications && powertoys_gpo::getSuspendNewUpdateToastValue() == powertoys_gpo::gpo_rule_configured_enabled)
+    // Check toast notification GPOs and settings. (We check only if notifications are allowed. This is the case if we are triggered by the periodic check.)
+    // Disable notification GPO or setting
+    bool disable_notification_setting = get_general_settings().showNewUpdatesToastNotification == false;
+    if (show_notifications && (disable_notification_setting || powertoys_gpo::getDisableNewUpdateToastValue() == powertoys_gpo::gpo_rule_configured_enabled))
+    {
+        Logger::info(L"There is a new update available or ready to install. But the toast notification is disabled by setting or GPO.");
+        show_notifications = false;
+    }
+    // Suspend notification GPO
+    else if (show_notifications && powertoys_gpo::getSuspendNewUpdateToastValue() == powertoys_gpo::gpo_rule_configured_enabled)
     {
         Logger::info(L"GPO to suspend new update toast notification is enabled.");
         if (new_version_info.version.major <= VERSION_MAJOR && new_version_info.version.minor - VERSION_MINOR <= UPDATE_NOTIFICATION_TOAST_SUSPEND_MINOR_VERSION_COUNT)
@@ -159,6 +166,10 @@ void ProcessNewVersionInfo(const github_version_info& version_info,
     if (download_update)
     {
         Logger::trace(L"Downloading installer for a new version");
+
+        // Cleanup old updates before downloading the latest
+        updating::cleanup_updates();
+
         if (download_new_version(new_version_info).get())
         {
             state.state = UpdateState::readyToInstall;
@@ -189,14 +200,6 @@ void ProcessNewVersionInfo(const github_version_info& version_info,
 
 void PeriodicUpdateWorker()
 {
-    // Check if periodic update check is disabled by GPO.
-    // This policy code is implemented but not active. It is for later usage in PT version after 1.0 release.
-    //if (powertoys_gpo::getDisablePeriodicUpdateCheckValue() == powertoys_gpo::gpo_rule_configured_enabled)
-    //{
-    //    Logger::info(L"Initialization of periodic update checks stopped. Periodic update checks are disabled by GPO.");
-    //    return;
-    //}
-
     for (;;)
     {
         auto state = UpdateState::read();

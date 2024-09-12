@@ -4,11 +4,13 @@
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Common;
 using ManagedCommon;
 using Microsoft.PowerToys.PreviewHandler.Monaco.Properties;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using UtfUnknown;
 using Windows.System;
 
 namespace Microsoft.PowerToys.PreviewHandler.Monaco
@@ -107,18 +109,18 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
             _webView = new WebView2();
             _webView.DefaultBackgroundColor = Color.Transparent;
 
-            // Checks if dataSource is a string
-            if (!(dataSource is string filePath))
+            try
             {
-                throw new ArgumentException($"{nameof(dataSource)} for {nameof(MonacoPreviewHandlerControl)} must be a string but was a '{typeof(T)}'");
-            }
+                // Checks if dataSource is a string
+                if (!(dataSource is string filePath))
+                {
+                    throw new ArgumentException($"{nameof(dataSource)} for {nameof(MonacoPreviewHandlerControl)} must be a string but was a '{typeof(T)}'");
+                }
 
-            // Check if the file is too big.
-            long fileSize = new FileInfo(filePath).Length;
+                // Check if the file is too big.
+                long fileSize = new FileInfo(filePath).Length;
 
-            if (fileSize < _settings.MaxFileSize)
-            {
-                try
+                if (fileSize < _settings.MaxFileSize)
                 {
                     InitializeIndexFileAndSelectedFile(filePath);
 
@@ -157,6 +159,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
                                 _webView.NavigationCompleted += WebView2Init;
                                 _webView.Height = this.Height;
                                 _webView.Width = this.Width;
+                                _webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
                                 Controls.Add(_webView);
                                 _webView.SendToBack();
                                 _loadingBar.Value = 100;
@@ -164,7 +167,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
                             }
                             catch (NullReferenceException e)
                             {
-                                Logger.LogError("NullReferenceException catched. Skipping exception.", e);
+                                Logger.LogError("NullReferenceException caught. Skipping exception.", e);
                             }
                         }
                         catch (WebView2RuntimeNotFoundException e)
@@ -194,27 +197,37 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
                         }
                     });
                 }
-                catch (UnauthorizedAccessException e)
+                else
                 {
-                    Logger.LogError(e.Message);
-                    AddTextBoxControl(Resources.Access_Denied_Exception_Message);
+                    Logger.LogInfo("File is too big to display. Showing error message");
+                    AddTextBoxControl(Resources.Max_File_Size_Error.Replace("%1", (_settings.MaxFileSize / 1000).ToString(CultureInfo.CurrentCulture), StringComparison.InvariantCulture));
                 }
-                catch (Exception e)
-                {
-                    Logger.LogError(e.Message);
-                    string errorMessage = Resources.Exception_Occurred;
-                    errorMessage += e.Message;
-                    errorMessage += "\n" + e.Source;
-                    errorMessage += "\n" + e.StackTrace;
-                    AddTextBoxControl(errorMessage);
-                }
-
-                this.Resize += FormResize;
             }
-            else
+            catch (UnauthorizedAccessException e)
             {
-                Logger.LogInfo("File is too big to display. Showing error message");
-                AddTextBoxControl(Resources.Max_File_Size_Error.Replace("%1", (_settings.MaxFileSize / 1000).ToString(CultureInfo.CurrentCulture), StringComparison.InvariantCulture));
+                Logger.LogError(e.Message);
+                AddTextBoxControl(Resources.Access_Denied_Exception_Message);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+                string errorMessage = Resources.Exception_Occurred;
+                errorMessage += e.Message;
+                errorMessage += "\n" + e.Source;
+                errorMessage += "\n" + e.StackTrace;
+                AddTextBoxControl(errorMessage);
+            }
+
+            this.Resize += FormResize;
+        }
+
+        private async void CoreWebView2_NewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
+        {
+            // Monaco opens URI in a new window. We open the URI in the default web browser.
+            if (e.Uri != null && e.IsUserInitiated)
+            {
+                e.Handled = true;
+                await Launcher.LaunchUriAsync(new Uri(e.Uri));
             }
         }
 
@@ -347,7 +360,13 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
             Logger.LogInfo("Starting getting monaco language id out of filetype");
             _vsCodeLangSet = FileHandler.GetLanguage(Path.GetExtension(filePath));
 
-            using (StreamReader fileReader = new StreamReader(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+            DetectionResult result = CharsetDetector.DetectFromFile(filePath);
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            // Check if the detected encoding is not null, otherwise default to UTF-8
+            Encoding encodingToUse = result.Detected?.Encoding ?? Encoding.UTF8;
+
+            using (StreamReader fileReader = new StreamReader(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), encodingToUse))
             {
                 Logger.LogInfo("Starting reading requested file");
                 var fileContent = fileReader.ReadToEnd();
@@ -377,7 +396,10 @@ namespace Microsoft.PowerToys.PreviewHandler.Monaco
             _html = FilePreviewCommon.MonacoHelper.ReadIndexHtml();
             _html = _html.Replace("[[PT_LANG]]", _vsCodeLangSet, StringComparison.InvariantCulture);
             _html = _html.Replace("[[PT_WRAP]]", _settings.Wrap ? "1" : "0", StringComparison.InvariantCulture);
+            _html = _html.Replace("[[PT_CONTEXTMENU]]", "1", StringComparison.InvariantCulture);
             _html = _html.Replace("[[PT_THEME]]", Settings.GetTheme(), StringComparison.InvariantCulture);
+            _html = _html.Replace("[[PT_STICKY_SCROLL]]", _settings.StickyScroll ? "1" : "0", StringComparison.InvariantCulture);
+            _html = _html.Replace("[[PT_FONT_SIZE]]", _settings.FontSize.ToString(CultureInfo.InvariantCulture), StringComparison.InvariantCulture);
             _html = _html.Replace("[[PT_CODE]]", _base64FileCode, StringComparison.InvariantCulture);
             _html = _html.Replace("[[PT_URL]]", FilePreviewCommon.MonacoHelper.VirtualHostName, StringComparison.InvariantCulture);
         }

@@ -5,7 +5,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using AllExperiments;
 using global::PowerToys.GPOWrapper;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.OOBE.Enums;
@@ -52,13 +51,16 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
 
         private static ISettingsUtils settingsUtils = new SettingsUtils();
 
-        private bool ExperimentationToggleSwitchEnabled { get; set; } = true;
+        /* NOTE: Experimentation for OOBE is currently turned off on server side. Keeping this code in a comment to allow future experiments.
+          private bool ExperimentationToggleSwitchEnabled { get; set; } = true;
+        */
 
         public OobeShellPage()
         {
             InitializeComponent();
 
-            ExperimentationToggleSwitchEnabled = SettingsRepository<GeneralSettings>.GetInstance(settingsUtils).SettingsConfig.EnableExperimentation;
+            // NOTE: Experimentation for OOBE is currently turned off on server side. Keeping this code in a comment to allow future experiments.
+            // ExperimentationToggleSwitchEnabled = SettingsRepository<GeneralSettings>.GetInstance(settingsUtils).SettingsConfig.EnableExperimentation;
             SetTitleBar();
             DataContext = ViewModel;
             OobeShellHandler = this;
@@ -68,6 +70,11 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
             {
                 ModuleName = "Overview",
                 IsNew = false,
+            });
+            Modules.Insert((int)PowerToysModules.AdvancedPaste, new OobePowerToysModule()
+            {
+                ModuleName = "AdvancedPaste",
+                IsNew = true,
             });
             Modules.Insert((int)PowerToysModules.AlwaysOnTop, new OobePowerToysModule()
             {
@@ -79,10 +86,25 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
                 ModuleName = "Awake",
                 IsNew = false,
             });
+            Modules.Insert((int)PowerToysModules.CmdNotFound, new OobePowerToysModule()
+            {
+                ModuleName = "CmdNotFound",
+                IsNew = true,
+            });
             Modules.Insert((int)PowerToysModules.ColorPicker, new OobePowerToysModule()
             {
                 ModuleName = "ColorPicker",
                 IsNew = false,
+            });
+            Modules.Insert((int)PowerToysModules.CropAndLock, new OobePowerToysModule()
+            {
+                ModuleName = "CropAndLock",
+                IsNew = true,
+            });
+            Modules.Insert((int)PowerToysModules.EnvironmentVariables, new OobePowerToysModule()
+            {
+                ModuleName = "EnvironmentVariables",
+                IsNew = true,
             });
             Modules.Insert((int)PowerToysModules.FancyZones, new OobePowerToysModule()
             {
@@ -168,10 +190,10 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
                 IsNew = true,
             });
 
-            Modules.Insert((int)PowerToysModules.PastePlain, new OobePowerToysModule()
+            Modules.Insert((int)PowerToysModules.Workspaces, new OobePowerToysModule()
             {
-                ModuleName = "PastePlain",
-                IsNew = true,
+                ModuleName = "Workspaces",
+                IsNew = false,
             });
 
             Modules.Insert((int)PowerToysModules.WhatsNew, new OobePowerToysModule()
@@ -216,7 +238,8 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
             {
                 switch (selectedItem.Tag)
                 {
-                    case "Overview":
+                    case "Overview": NavigationFrame.Navigate(typeof(OobeOverview)); break;
+                    /* NOTE: Experimentation for OOBE is currently turned off on server side. Keeping this code in a comment to allow future experiments.
                         if (ExperimentationToggleSwitchEnabled && GPOWrapper.GetAllowExperimentationValue() != GpoRuleConfigured.Disabled)
                         {
                             switch (AllExperiments.Experiments.LandingPageExperiment)
@@ -236,11 +259,15 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
                             NavigationFrame.Navigate(typeof(OobeOverview));
                             break;
                         }
-
+                    */
                     case "WhatsNew": NavigationFrame.Navigate(typeof(OobeWhatsNew)); break;
+                    case "AdvancedPaste": NavigationFrame.Navigate(typeof(OobeAdvancedPaste)); break;
                     case "AlwaysOnTop": NavigationFrame.Navigate(typeof(OobeAlwaysOnTop)); break;
                     case "Awake": NavigationFrame.Navigate(typeof(OobeAwake)); break;
+                    case "CmdNotFound": NavigationFrame.Navigate(typeof(OobeCmdNotFound)); break;
                     case "ColorPicker": NavigationFrame.Navigate(typeof(OobeColorPicker)); break;
+                    case "CropAndLock": NavigationFrame.Navigate(typeof(OobeCropAndLock)); break;
+                    case "EnvironmentVariables": NavigationFrame.Navigate(typeof(OobeEnvironmentVariables)); break;
                     case "FancyZones": NavigationFrame.Navigate(typeof(OobeFancyZones)); break;
                     case "FileLocksmith": NavigationFrame.Navigate(typeof(OobeFileLocksmith)); break;
                     case "Run": NavigationFrame.Navigate(typeof(OobeRun)); break;
@@ -257,8 +284,8 @@ namespace Microsoft.PowerToys.Settings.UI.OOBE.Views
                     case "MeasureTool": NavigationFrame.Navigate(typeof(OobeMeasureTool)); break;
                     case "Hosts": NavigationFrame.Navigate(typeof(OobeHosts)); break;
                     case "RegistryPreview": NavigationFrame.Navigate(typeof(OobeRegistryPreview)); break;
-                    case "PastePlain": NavigationFrame.Navigate(typeof(OobePastePlain)); break;
                     case "Peek": NavigationFrame.Navigate(typeof(OobePeek)); break;
+                    case "Workspaces": NavigationFrame.Navigate(typeof(OobeWorkspaces)); break;
                 }
             }
         }

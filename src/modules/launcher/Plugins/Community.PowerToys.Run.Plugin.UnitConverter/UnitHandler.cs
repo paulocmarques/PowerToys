@@ -36,20 +36,21 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
         private static Enum GetUnitEnum(string unit, QuantityInfo unitInfo)
         {
             UnitInfo first = Array.Find(unitInfo.UnitInfos, info =>
-                unit.ToLowerInvariant() == info.Name.ToLowerInvariant() || unit.ToLowerInvariant() == info.PluralName.ToLowerInvariant());
+                string.Equals(unit, info.Name, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(unit, info.PluralName, StringComparison.OrdinalIgnoreCase));
 
             if (first != null)
             {
                 return first.Value;
             }
 
-            if (UnitParser.Default.TryParse(unit, unitInfo.UnitType, out Enum enum_unit))
+            if (UnitsNetSetup.Default.UnitParser.TryParse(unit, unitInfo.UnitType, out Enum enum_unit))
             {
                 return enum_unit;
             }
 
             var cultureInfoEnglish = new System.Globalization.CultureInfo("en-US");
-            if (UnitParser.Default.TryParse(unit, unitInfo.UnitType, cultureInfoEnglish, out Enum enum_unit_en))
+            if (UnitsNetSetup.Default.UnitParser.TryParse(unit, unitInfo.UnitType, cultureInfoEnglish, out Enum enum_unit_en))
             {
                 return enum_unit_en;
             }

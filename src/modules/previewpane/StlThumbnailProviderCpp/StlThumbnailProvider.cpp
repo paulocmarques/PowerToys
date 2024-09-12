@@ -136,6 +136,9 @@ IFACEMETHODIMP StlThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_A
             }
             file.close();
 
+            m_pStream->Release();
+            m_pStream = NULL;
+
             try
             {
                 Logger::info(L"Start StlThumbnailProvider.exe");
@@ -176,6 +179,13 @@ IFACEMETHODIMP StlThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_A
                 Logger::error(L"Failed to start StlThumbnailProvider.exe. Error: {}", errorMessage);
             }
         }
+    }
+
+    // ensure releasing the stream (not all if branches contain it)
+    if (m_pStream)
+    {
+        m_pStream->Release();
+        m_pStream = NULL;
     }
 
     return S_OK;

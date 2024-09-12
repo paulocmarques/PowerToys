@@ -1,10 +1,11 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ManagedCommon;
@@ -21,7 +22,6 @@ using Peek.UI.Telemetry.Events;
 using Windows.Graphics;
 using Windows.Storage;
 using Windows.System;
-using WinUIEx;
 
 namespace Peek.UI.Views
 {
@@ -75,6 +75,8 @@ namespace Peek.UI.Views
         {
             InitializeComponent();
             TitleBarRootContainer.SizeChanged += TitleBarRootContainer_SizeChanged;
+
+            LaunchAppButton.RegisterPropertyChangedCallback(VisibilityProperty, LaunchAppButtonVisibilityChangedCallback);
         }
 
         public IFileSystemItem Item
@@ -110,17 +112,15 @@ namespace Peek.UI.Views
             if (AppWindowTitleBar.IsCustomizationSupported())
             {
                 UpdateTitleBarCustomization(mainWindow);
+
+                // Ensure the drag region of the title bar is updated on first Peek activation
+                UpdateDragRegion();
             }
             else
             {
                 var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
                 ThemeHelpers.SetImmersiveDarkMode(hWnd, ThemeHelpers.GetAppTheme() == AppTheme.Dark);
                 Visibility = Visibility.Collapsed;
-
-                // Set window icon
-                WindowId windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-                AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
-                appWindow.SetIcon("Assets/Peek/Icon.ico");
             }
         }
 
@@ -130,7 +130,7 @@ namespace Peek.UI.Views
         }
 
         [RelayCommand]
-        private async void LaunchDefaultAppButtonAsync()
+        private async Task LaunchDefaultAppButtonAsync()
         {
             if (Item is not FileItem fileItem)
             {
@@ -143,7 +143,7 @@ namespace Peek.UI.Views
             PowerToysTelemetry.Log.WriteEvent(new OpenWithEvent() { App = DefaultAppName ?? string.Empty });
 
             // StorageFile objects can't represent files that are ".lnk", ".url", or ".wsh" file types.
-            // https://learn.microsoft.com/en-us/uwp/api/windows.storage.storagefile?view=winrt-22621
+            // https://learn.microsoft.com/uwp/api/windows.storage.storagefile?view=winrt-22621
             if (storageFile == null)
             {
                 options.DisplayApplicationPicker = true;
@@ -170,7 +170,7 @@ namespace Peek.UI.Views
 
         public string PinGlyph(bool pinned)
         {
-            return pinned ? "\xE841" : "\xE77A";
+            return pinned ? "\xE77A" : "\xE718";
         }
 
         public string PinToolTip(bool pinned)
@@ -201,22 +201,22 @@ namespace Peek.UI.Views
             {
                 var scale = MainWindow.GetMonitorScale();
 
-                SystemRightPaddingColumn.Width = new GridLength(appWindow.TitleBar.RightInset / scale);
                 SystemLeftPaddingColumn.Width = new GridLength(appWindow.TitleBar.LeftInset / scale);
+                SystemRightPaddingColumn.Width = new GridLength(appWindow.TitleBar.RightInset / scale);
 
                 var dragRectsList = new List<RectInt32>();
-
                 RectInt32 dragRectangleLeft;
+                RectInt32 dragRectangleRight;
+
                 dragRectangleLeft.X = (int)(SystemLeftPaddingColumn.ActualWidth * scale);
                 dragRectangleLeft.Y = 0;
-                dragRectangleLeft.Height = (int)(TitleBarRootContainer.ActualHeight * scale);
                 dragRectangleLeft.Width = (int)(DraggableColumn.ActualWidth * scale);
+                dragRectangleLeft.Height = (int)(TitleBarRootContainer.ActualHeight * scale);
 
-                RectInt32 dragRectangleRight;
                 dragRectangleRight.X = (int)((SystemLeftPaddingColumn.ActualWidth + DraggableColumn.ActualWidth + LaunchAppButtonColumn.ActualWidth) * scale);
                 dragRectangleRight.Y = 0;
-                dragRectangleRight.Height = (int)(TitleBarRootContainer.ActualHeight * scale);
                 dragRectangleRight.Width = (int)(AppRightPaddingColumn.ActualWidth * scale);
+                dragRectangleRight.Height = (int)(TitleBarRootContainer.ActualHeight * scale);
 
                 dragRectsList.Add(dragRectangleLeft);
                 dragRectsList.Add(dragRectangleRight);
@@ -233,14 +233,7 @@ namespace Peek.UI.Views
                 appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
                 appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
                 appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-                if (ThemeHelpers.GetAppTheme() == AppTheme.Light)
-                {
-                    appWindow.TitleBar.ButtonForegroundColor = Colors.DarkSlateGray;
-                }
-                else
-                {
-                    appWindow.TitleBar.ButtonForegroundColor = Colors.White;
-                }
+                appWindow.TitleBar.ButtonForegroundColor = ThemeHelpers.GetAppTheme() == AppTheme.Light ? Colors.DarkSlateGray : Colors.White;
 
                 mainWindow.SetTitleBar(this);
             }
@@ -274,14 +267,34 @@ namespace Peek.UI.Views
 
         private void UpdateDefaultAppToLaunch()
         {
-            // Update the name of default app to launch
-            DefaultAppName = DefaultAppHelper.TryGetDefaultAppName(Item.Extension);
+            if (Item is FileItem)
+            {
+                // Update the name of default app to launch
+                DefaultAppName = DefaultAppHelper.TryGetDefaultAppName(Item.Extension);
 
-            string openWithAppTextFormat = ResourceLoaderInstance.ResourceLoader.GetString("LaunchAppButton_OpenWithApp_Text");
-            OpenWithAppText = string.Format(CultureInfo.InvariantCulture, openWithAppTextFormat, DefaultAppName);
+                string openWithAppTextFormat = ResourceLoaderInstance.ResourceLoader.GetString("LaunchAppButton_OpenWithApp_Text");
+                OpenWithAppText = string.Format(CultureInfo.InvariantCulture, openWithAppTextFormat, DefaultAppName);
 
-            string openWithAppToolTipFormat = ResourceLoaderInstance.ResourceLoader.GetString("LaunchAppButton_OpenWithApp_ToolTip");
-            OpenWithAppToolTip = string.Format(CultureInfo.InvariantCulture, openWithAppToolTipFormat, DefaultAppName);
+                string openWithAppToolTipFormat = ResourceLoaderInstance.ResourceLoader.GetString("LaunchAppButton_OpenWithApp_ToolTip");
+                OpenWithAppToolTip = string.Format(CultureInfo.InvariantCulture, openWithAppToolTipFormat, DefaultAppName);
+            }
+            else
+            {
+                DefaultAppName = string.Empty;
+                OpenWithAppText = string.Empty;
+                OpenWithAppToolTip = string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Ensure the drag region of the title bar is updated when the visibility of the launch app button changes.
+        /// </summary>
+        private async void LaunchAppButtonVisibilityChangedCallback(DependencyObject sender, DependencyProperty dp)
+        {
+            // Ensure the ActualWidth is updated
+            await Task.Delay(100);
+
+            UpdateDragRegion();
         }
     }
 }

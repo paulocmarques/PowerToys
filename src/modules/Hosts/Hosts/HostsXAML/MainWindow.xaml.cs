@@ -1,17 +1,28 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Hosts.Helpers;
+using HostsUILib.Helpers;
+using HostsUILib.Views;
+using ManagedCommon;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Windows.ApplicationModel.Resources;
 using WinUIEx;
 
+// To learn more about WinUI, the WinUI project structure,
+// and more about our project templates, see: http://aka.ms/winui-project-info.
 namespace Hosts
 {
+    /// <summary>
+    /// An empty window that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class MainWindow : WindowEx
     {
+        private HostsMainPage MainPage { get; }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -19,11 +30,19 @@ namespace Hosts
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(titleBar);
             AppWindow.SetIcon("Assets/Hosts/Hosts.ico");
-            Title = ResourceLoaderInstance.ResourceLoader.GetString("WindowTitle");
 
-            BringToForeground();
+            var loader = new ResourceLoader("PowerToys.HostsUILib.pri", "PowerToys.HostsUILib/Resources");
 
+            var title = Host.GetService<IElevationHelper>().IsElevated ? loader.GetString("WindowAdminTitle") : loader.GetString("WindowTitle");
+            Title = title;
+            AppTitleTextBlock.Text = title;
+
+            var handle = this.GetWindowHandle();
+
+            WindowHelpers.BringToForeground(handle);
             Activated += MainWindow_Activated;
+
+            MainPage = Host.GetService<HostsMainPage>();
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -38,24 +57,10 @@ namespace Hosts
             }
         }
 
-        private void BringToForeground()
+        private void Grid_Loaded(object sender, RoutedEventArgs e)
         {
-            var handle = this.GetWindowHandle();
-            var fgHandle = NativeMethods.GetForegroundWindow();
-
-            var threadId1 = NativeMethods.GetWindowThreadProcessId(handle, System.IntPtr.Zero);
-            var threadId2 = NativeMethods.GetWindowThreadProcessId(fgHandle, System.IntPtr.Zero);
-
-            if (threadId1 != threadId2)
-            {
-                NativeMethods.AttachThreadInput(threadId1, threadId2, true);
-                NativeMethods.SetForegroundWindow(handle);
-                NativeMethods.AttachThreadInput(threadId1, threadId2, false);
-            }
-            else
-            {
-                NativeMethods.SetForegroundWindow(handle);
-            }
+            MainGrid.Children.Add(MainPage);
+            Grid.SetRow(MainPage, 1);
         }
     }
 }

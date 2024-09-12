@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -13,11 +14,11 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
 {
     public static class InputInterpreter
     {
-        private static string pattern = @"(?<=\d)(?![,.])(?=\D)|(?<=\D)(?<![,.])(?=\d)";
+        private static readonly string Pattern = @"(?<=\d)(?![,.\-])(?=[\D])|(?<=[\D])(?<![,.\-])(?=\d)";
 
         public static string[] RegexSplitter(string[] split)
         {
-            return Regex.Split(split[0], pattern);
+            return Regex.Split(split[0], Pattern);
         }
 
         /// <summary>
@@ -30,7 +31,7 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
                 return;
             }
 
-            string[] parseInputWithoutSpace = Regex.Split(split[0], pattern);
+            string[] parseInputWithoutSpace = Regex.Split(split[0], Pattern);
 
             if (parseInputWithoutSpace.Length > 1)
             {
@@ -79,6 +80,12 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
                         // ex: 1'2 and 1'2"
                         if (shortsplit[1] == "\'")
                         {
+                            bool isNegative = shortsplit[0].StartsWith('-');
+                            if (isNegative)
+                            {
+                                shortsplit[0] = shortsplit[0].Remove(0, 1);
+                            }
+
                             bool isFeet = double.TryParse(shortsplit[0], NumberStyles.AllowDecimalPoint, culture, out double feet);
                             bool isInches = double.TryParse(shortsplit[2], NumberStyles.AllowDecimalPoint, culture, out double inches);
 
@@ -88,9 +95,13 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
                                 break;
                             }
 
-                            string convertedTotalInFeet = Length.FromFeetInches(feet, inches).Feet.ToString(culture);
+                            double convertedTotalInFeet = Length.FromFeetInches(feet, inches).Feet;
+                            if (isNegative)
+                            {
+                                convertedTotalInFeet *= -1;
+                            }
 
-                            string[] newInput = new string[] { convertedTotalInFeet, "foot", split[1], split[2] };
+                            string[] newInput = new string[] { convertedTotalInFeet.ToString(culture), "foot", split[1], split[2] };
                             split = newInput;
                         }
 
@@ -157,15 +168,31 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
         /// </summary>
         public static void FeetToFt(ref string[] split)
         {
-            if (split[1].ToLowerInvariant() == "feet")
+            if (string.Equals(split[1], "feet", StringComparison.OrdinalIgnoreCase))
             {
                 split[1] = "ft";
             }
 
-            if (split[3].ToLowerInvariant() == "feet")
+            if (string.Equals(split[3], "feet", StringComparison.OrdinalIgnoreCase))
             {
                 split[3] = "ft";
             }
+        }
+
+        /// <summary>
+        /// Converts spelling "kph" to "km/h"
+        /// </summary>
+        public static void KPHHandler(ref string[] split)
+        {
+            split[1] = split[1].Replace("cph", "cm/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[1] = split[1].Replace("kph", "km/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[1] = split[1].Replace("kmph", "km/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[1] = split[1].Replace("cmph", "cm/h", System.StringComparison.CurrentCultureIgnoreCase);
+
+            split[3] = split[3].Replace("cph", "cm/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[3] = split[3].Replace("kph", "km/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[3] = split[3].Replace("kmph", "km/h", System.StringComparison.CurrentCultureIgnoreCase);
+            split[3] = split[3].Replace("cmph", "cm/h", System.StringComparison.CurrentCultureIgnoreCase);
         }
 
         /// <summary>
@@ -183,7 +210,8 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
         public static void GallonHandler(ref string[] split, CultureInfo culture)
         {
             HashSet<string> britishCultureNames = new HashSet<string>() { "en-AI", "en-VG", "en-GB", "en-KY", "en-MS", "en-AG", "en-DM", "en-GD", "en-KN", "en-LC", "en-VC", "en-IE", "en-GY", "en-AE" };
-            if (split[1].ToLowerInvariant() == "gal" || split[1].ToLowerInvariant() == "gallon")
+            if (string.Equals(split[1], "gal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[1], "gallon", StringComparison.OrdinalIgnoreCase))
             {
                 if (britishCultureNames.Contains(culture.Name))
                 {
@@ -195,7 +223,8 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
                 }
             }
 
-            if (split[3].ToLowerInvariant() == "gal" || split[3].ToLowerInvariant() == "gallon")
+            if (string.Equals(split[3], "gal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[3], "gallon", StringComparison.OrdinalIgnoreCase))
             {
                 if (britishCultureNames.Contains(culture.Name))
                 {
@@ -204,6 +233,43 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
                 else
                 {
                     split[3] = "UsGallon";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Choose "UsOunce" or "ImperialOunce" according to current culture when the input contains "o.z", "o.z.", "oz" or "ounce".
+        /// </summary>
+        public static void OunceHandler(ref string[] split, CultureInfo culture)
+        {
+            HashSet<string> britishCultureNames = new HashSet<string>() { "en-AI", "en-VG", "en-GB", "en-KY", "en-MS", "en-AG", "en-DM", "en-GD", "en-KN", "en-LC", "en-VC", "en-IE", "en-GY", "en-AE" };
+            if (string.Equals(split[1], "o.z", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[1], "ounce", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[1], "o.z.", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[1], "oz", StringComparison.OrdinalIgnoreCase))
+            {
+                if (britishCultureNames.Contains(culture.Name))
+                {
+                    split[1] = "ImperialOunce";
+                }
+                else
+                {
+                    split[1] = "UsOunce";
+                }
+            }
+
+            if (string.Equals(split[3], "o.z", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[3], "ounce", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[3], "o.z.", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(split[3], "oz", StringComparison.OrdinalIgnoreCase))
+            {
+                if (britishCultureNames.Contains(culture.Name))
+                {
+                    split[3] = "ImperialOunce";
+                }
+                else
+                {
+                    split[3] = "UsOunce";
                 }
             }
         }
@@ -226,7 +292,9 @@ namespace Community.PowerToys.Run.Plugin.UnitConverter
             InputInterpreter.DegreePrefixer(ref split);
             InputInterpreter.MetreToMeter(ref split);
             InputInterpreter.FeetToFt(ref split);
+            InputInterpreter.KPHHandler(ref split);
             InputInterpreter.GallonHandler(ref split, CultureInfo.CurrentCulture);
+            InputInterpreter.OunceHandler(ref split, CultureInfo.CurrentCulture);
             if (!double.TryParse(split[0], out double value))
             {
                 return null;

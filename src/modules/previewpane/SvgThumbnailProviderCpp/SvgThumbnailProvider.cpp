@@ -136,6 +136,9 @@ IFACEMETHODIMP SvgThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_A
             }
             file.close();
 
+            m_pStream->Release();
+            m_pStream = NULL;
+
             try
             {
                 Logger::info(L"Start SvgThumbnailProvider.exe");
@@ -177,6 +180,13 @@ IFACEMETHODIMP SvgThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_A
                 Logger::error(L"Failed to start SvgThumbnailProvider.exe. Error: {}", errorMessage);
             }
         }
+    }
+
+    // ensure releasing the stream (not all if branches contain it)
+    if (m_pStream)
+    {
+        m_pStream->Release();
+        m_pStream = NULL;
     }
 
     return S_OK;

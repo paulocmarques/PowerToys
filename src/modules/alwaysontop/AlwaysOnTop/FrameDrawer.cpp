@@ -62,7 +62,7 @@ bool FrameDrawer::CreateRenderTargets(const RECT& clientRect)
         return false;
     }
 
-    m_renderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+    m_renderTarget->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
     m_renderTargetSizeHash = rectHash;
 
     return true;
@@ -90,10 +90,10 @@ void FrameDrawer::Show()
     Render();
 }
 
-void FrameDrawer::SetBorderRect(RECT windowRect, COLORREF color, int thickness, float radius)
+void FrameDrawer::SetBorderRect(RECT windowRect, COLORREF rgb, float alpha, int thickness, float radius)
 {
     auto newSceneRect = DrawableRect{
-        .borderColor = ConvertColor(color),
+        .borderColor = ConvertColor(rgb, alpha),
         .thickness = thickness,
     };
 
@@ -175,12 +175,12 @@ IDWriteFactory* FrameDrawer::GetWriteFactory()
     return pDWriteFactory;
 }
 
-D2D1_COLOR_F FrameDrawer::ConvertColor(COLORREF color)
+D2D1_COLOR_F FrameDrawer::ConvertColor(COLORREF color, float alpha)
 {
     return D2D1::ColorF(GetRValue(color) / 255.f,
                         GetGValue(color) / 255.f,
                         GetBValue(color) / 255.f,
-                        1.f);
+                        alpha);
 }
 
 D2D1_ROUNDED_RECT FrameDrawer::ConvertRect(RECT rect, int thickness, float radius)

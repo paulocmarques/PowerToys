@@ -49,10 +49,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             Func<string, int> ipcMSGCallBackFunc)
         {
             // Obtain the general PowerToy settings configurations
-            if (settingsRepository == null)
-            {
-                throw new ArgumentNullException(nameof(settingsRepository));
-            }
+            ArgumentNullException.ThrowIfNull(settingsRepository);
 
             GeneralSettingsConfig = settingsRepository.SettingsConfig;
 
@@ -70,7 +67,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             InitializeEnabledValue();
 
-            // set the callback functions value to hangle outgoing IPC message.
+            // set the callback functions value to handle outgoing IPC message.
             SendConfigMSG = ipcMSGCallBackFunc;
 
             _delayedTimer = new Timer();
@@ -300,13 +297,16 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             UpdateColorFormats();
             UpdateColorFormatPreview();
-            ScheduleSavingOfSettings();
         }
 
         private void ColorFormat_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            UpdateColorFormats();
-            ScheduleSavingOfSettings();
+            // Remaining properties are handled by the collection and by the dialog
+            if (e.PropertyName == nameof(ColorFormatModel.IsShown))
+            {
+                UpdateColorFormats();
+                ScheduleSavingOfSettings();
+            }
         }
 
         private void ScheduleSavingOfSettings()
@@ -424,10 +424,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             return colorFormatModel.IsValid;
         }
 
-        internal void DeleteModel(ColorFormatModel colorFormatModel)
+        internal int DeleteModel(ColorFormatModel colorFormatModel)
         {
+            var deleteIndex = ColorFormats.IndexOf(colorFormatModel);
             ColorFormats.Remove(colorFormatModel);
-            SetPreviewSelectedIndex();
+            return deleteIndex;
         }
 
         internal void UpdateColorFormat(string oldName, ColorFormatModel colorFormat)
@@ -437,6 +438,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 SelectedColorRepresentationValue = colorFormat.Name;    // name might be changed by the user
             }
 
+            UpdateColorFormats();
             UpdateColorFormatPreview();
         }
 

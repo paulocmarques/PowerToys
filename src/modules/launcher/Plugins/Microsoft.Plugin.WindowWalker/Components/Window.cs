@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Wox.Plugin.Common.VirtualDesktop.Helper;
 using Wox.Plugin.Common.Win32;
 using Wox.Plugin.Logger;
@@ -362,7 +363,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
             {
                 if (_handlesToProcessCache.Count > 7000)
                 {
-                    Debug.Print("Clearing Process Cache because it's size is " + _handlesToProcessCache.Count);
+                    Debug.Print("Clearing Process Cache because its size is " + _handlesToProcessCache.Count);
                     _handlesToProcessCache.Clear();
                 }
 
@@ -380,7 +381,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
                     }
                     else
                     {
-                        // For the dwm process we can not receive the name. This is no problem because the window isn't part of result list.
+                        // For the dwm process we cannot receive the name. This is no problem because the window isn't part of result list.
                         Log.Debug($"Invalid process {processId} ({processName}) for window handle {hWindow}.", typeof(Window));
                         _handlesToProcessCache.Add(hWindow, new WindowProcess(0, 0, string.Empty));
                     }

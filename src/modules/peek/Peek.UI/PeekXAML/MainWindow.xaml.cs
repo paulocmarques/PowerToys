@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+
 using ManagedCommon;
 using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI;
@@ -47,7 +48,8 @@ namespace Peek.UI
             ViewModel = Application.Current.GetService<MainWindowViewModel>();
 
             TitleBarControl.SetTitleBarToWindow(this);
-            AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+            ExtendsContentIntoTitleBar = true;
+            WindowHelpers.ForceTopBorder1PixelInsetOnWindows10(this.GetWindowHandle());
             AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
             AppWindow.SetIcon("Assets/Peek/Icon.ico");
 
@@ -71,6 +73,7 @@ namespace Peek.UI
                 if (IsNewSingleSelectedItem(foregroundWindowHandle))
                 {
                     Initialize(foregroundWindowHandle);
+                    Activate(); // Brings existing window into focus in case it was previously minimized
                 }
                 else
                 {

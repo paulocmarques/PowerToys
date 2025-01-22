@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using Workspaces.Data;
 using static WorkspacesEditor.Data.ProjectData;
 
 namespace WorkspacesEditor.Data
@@ -23,6 +22,8 @@ namespace WorkspacesEditor.Data
                 public int Height { get; set; }
             }
 
+            public string Id { get; set; }
+
             public string Application { get; set; }
 
             public string ApplicationPath { get; set; }
@@ -32,6 +33,8 @@ namespace WorkspacesEditor.Data
             public string PackageFullName { get; set; }
 
             public string AppUserModelId { get; set; }
+
+            public string PwaAppId { get; set; }
 
             public string CommandLineArguments { get; set; }
 

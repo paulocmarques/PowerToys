@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+
 using ColorPicker.Helpers;
 using ColorPicker.ViewModels;
 
@@ -101,7 +102,7 @@ namespace ColorPicker.Views
         private void HistoryColors_ItemClick(object sender, ItemClickEventArgs e)
         {
             // Note: it does not handle clicking on the same color.
-            // More appropriate event would be SelectionChanged but we can not distinguish between user action and program action inside of it.
+            // More appropriate event would be SelectionChanged but we cannot distinguish between user action and program action inside of it.
             SessionEventHelper.Event.EditorHistoryColorPicked = true;
         }
         */

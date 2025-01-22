@@ -17,10 +17,12 @@ using System.Windows;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Telemetry;
+using WorkspacesCsharpLibrary;
 using WorkspacesEditor.Data;
 using WorkspacesEditor.Models;
 using WorkspacesEditor.Telemetry;
 using WorkspacesEditor.Utils;
+
 using static WorkspacesEditor.Data.WorkspacesData;
 
 namespace WorkspacesEditor.ViewModels
@@ -37,6 +39,8 @@ namespace WorkspacesEditor.ViewModels
         private MainWindow _mainWindow;
         private Timer lastUpdatedTimer;
         private WorkspacesSettings settings;
+        private PwaHelper _pwaHelper;
+        private bool _isExistingProjectLaunched;
 
         public ObservableCollection<Project> Workspaces { get; set; } = new ObservableCollection<Project>();
 
@@ -145,6 +149,7 @@ namespace WorkspacesEditor.ViewModels
             settings = Utils.Settings.ReadSettings();
             _orderByIndex = (int)settings.Properties.SortBy;
             _workspacesEditorIO = workspacesEditorIO;
+            _pwaHelper = new PwaHelper();
             lastUpdatedTimer = new System.Timers.Timer();
             lastUpdatedTimer.Interval = 1000;
             lastUpdatedTimer.Elapsed += LastUpdatedTimerElapsed;
@@ -252,12 +257,12 @@ namespace WorkspacesEditor.ViewModels
         {
             CancelSnapshot();
 
-            await Task.Run(() => RunSnapshotTool());
+            await Task.Run(() => RunSnapshotTool(_isExistingProjectLaunched));
 
             Project project = _workspacesEditorIO.ParseTempProject();
             if (project != null)
             {
-                if (editedProject != null)
+                if (_isExistingProjectLaunched)
                 {
                     project.UpdateAfterLaunchAndEdit(projectBeforeLaunch);
                     project.EditorWindowTitle = Properties.Resources.EditWorkspace;
@@ -396,6 +401,11 @@ namespace WorkspacesEditor.ViewModels
 
         public async void LaunchProject(Project project, bool exitAfterLaunch = false)
         {
+            if (project == null)
+            {
+                return;
+            }
+
             await Task.Run(() => RunLauncher(project.Id, InvokePoint.EditorButton));
             if (_workspacesEditorIO.ParseWorkspaces(this).Result == true)
             {
@@ -422,15 +432,12 @@ namespace WorkspacesEditor.ViewModels
             }
         }
 
-        private void RunSnapshotTool(string filename = null)
+        private void RunSnapshotTool(bool isExistingProjectLaunched)
         {
             Process process = new Process();
             process.StartInfo = new ProcessStartInfo(@".\PowerToys.WorkspacesSnapshotTool.exe");
             process.StartInfo.CreateNoWindow = true;
-            if (!string.IsNullOrEmpty(filename))
-            {
-                process.StartInfo.Arguments = filename;
-            }
+            process.StartInfo.Arguments = isExistingProjectLaunched ? $"{(int)InvokePoint.LaunchAndEdit}" : string.Empty;
 
             try
             {
@@ -475,6 +482,7 @@ namespace WorkspacesEditor.ViewModels
 
         internal void EnterSnapshotMode(bool isExistingProjectLaunched)
         {
+            _isExistingProjectLaunched = isExistingProjectLaunched;
             _mainWindow.WindowState = System.Windows.WindowState.Minimized;
             _overlayWindows.Clear();
             foreach (var screen in MonitorHelper.GetDpiUnawareScreens())

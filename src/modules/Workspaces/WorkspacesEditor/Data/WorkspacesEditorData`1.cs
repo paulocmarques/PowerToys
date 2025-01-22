@@ -5,25 +5,22 @@
 using System.Text.Json;
 using WorkspacesEditor.Utils;
 
-namespace Workspaces.Data
+namespace WorkspacesEditor.Data
 {
     public class WorkspacesEditorData<T>
     {
         protected JsonSerializerOptions JsonOptions
         {
-            get
+            get => new()
             {
-                return new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = new DashCaseNamingPolicy(),
-                    WriteIndented = true,
-                };
-            }
+                PropertyNamingPolicy = new DashCaseNamingPolicy(),
+                WriteIndented = true,
+            };
         }
 
         public T Read(string file)
         {
-            IOUtils ioUtils = new IOUtils();
+            IOUtils ioUtils = new();
             string data = ioUtils.ReadFile(file);
             return JsonSerializer.Deserialize<T>(data, JsonOptions);
         }

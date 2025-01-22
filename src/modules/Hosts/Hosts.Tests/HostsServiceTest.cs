@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Hosts.Tests.Mocks;
 using HostsUILib.Exceptions;
 using HostsUILib.Helpers;
@@ -275,7 +276,7 @@ namespace Hosts.Tests
 
             service.RemoveReadOnlyAttribute();
 
-            var readOnly = fileSystem.FileInfo.FromFileName(service.HostsFilePath).Attributes.HasFlag(FileAttributes.ReadOnly);
+            var readOnly = fileSystem.FileInfo.New(service.HostsFilePath).Attributes.HasFlag(FileAttributes.ReadOnly);
             Assert.IsFalse(readOnly);
         }
 
@@ -294,7 +295,7 @@ namespace Hosts.Tests
 
             await service.WriteAsync("# Empty hosts file", Enumerable.Empty<Entry>());
 
-            var hidden = fileSystem.FileInfo.FromFileName(service.HostsFilePath).Attributes.HasFlag(FileAttributes.Hidden);
+            var hidden = fileSystem.FileInfo.New(service.HostsFilePath).Attributes.HasFlag(FileAttributes.Hidden);
             Assert.IsTrue(hidden);
         }
     }

@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Windows.Controls;
+
 using ManagedCommon;
 using Microsoft.PowerToys.Run.Plugin.Calculator.Properties;
 using Microsoft.PowerToys.Settings.UI.Library;
@@ -20,6 +21,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
         private const string InputUseEnglishFormat = nameof(InputUseEnglishFormat);
         private const string OutputUseEnglishFormat = nameof(OutputUseEnglishFormat);
         private const string ReplaceInput = nameof(ReplaceInput);
+        private const string TrigMode = nameof(TrigMode);
 
         private static readonly CalculateEngine CalculateEngine = new CalculateEngine();
 
@@ -30,6 +32,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
         private bool _inputUseEnglishFormat;
         private bool _outputUseEnglishFormat;
         private bool _replaceInput;
+        private static CalculateEngine.TrigMode _trigMode;
 
         public string Name => Resources.wox_plugin_calculator_plugin_name;
 
@@ -65,6 +68,20 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
                 DisplayLabel = Resources.wox_plugin_calculator_replace_input,
                 DisplayDescription = Resources.wox_plugin_calculator_replace_input_description,
                 Value = true,
+            },
+            new PluginAdditionalOption
+            {
+                Key = TrigMode,
+                DisplayLabel = Resources.wox_plugin_calculator_trig_unit_mode,
+                DisplayDescription = Resources.wox_plugin_calculator_trig_unit_mode_description,
+                PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Combobox,
+                ComboBoxValue = (int)CalculateEngine.TrigMode.Radians,
+                ComboBoxItems =
+                [
+                    new KeyValuePair<string, string>(Resources.wox_plugin_calculator_trig_unit_radians, "0"),
+                    new KeyValuePair<string, string>(Resources.wox_plugin_calculator_trig_unit_degrees, "1"),
+                    new KeyValuePair<string, string>(Resources.wox_plugin_calculator_trig_unit_gradians, "2"),
+                ],
             },
         };
 
@@ -182,6 +199,7 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
             var inputUseEnglishFormat = false;
             var outputUseEnglishFormat = false;
             var replaceInput = true;
+            var trigMode = CalculateEngine.TrigMode.Radians;
 
             if (settings != null && settings.AdditionalOptions != null)
             {
@@ -193,11 +211,20 @@ namespace Microsoft.PowerToys.Run.Plugin.Calculator
 
                 var optionReplaceInput = settings.AdditionalOptions.FirstOrDefault(x => x.Key == ReplaceInput);
                 replaceInput = optionReplaceInput?.Value ?? replaceInput;
+
+                var optionTrigMode = settings.AdditionalOptions.FirstOrDefault(x => x.Key == TrigMode);
+                trigMode = (CalculateEngine.TrigMode)int.Parse(optionTrigMode.ComboBoxValue.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
             }
 
             _inputUseEnglishFormat = inputUseEnglishFormat;
             _outputUseEnglishFormat = outputUseEnglishFormat;
             _replaceInput = replaceInput;
+            _trigMode = trigMode;
+        }
+
+        public static CalculateEngine.TrigMode GetTrigMode()
+        {
+            return _trigMode;
         }
 
         public void Dispose()

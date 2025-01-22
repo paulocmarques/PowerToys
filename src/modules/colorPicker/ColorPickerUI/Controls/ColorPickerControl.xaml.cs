@@ -11,9 +11,11 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+
 using ColorPicker.Helpers;
 using ManagedCommon;
 using Wpf.Ui.Controls;
+
 using static System.Net.Mime.MediaTypeNames;
 
 namespace ColorPicker.Controls
@@ -323,7 +325,7 @@ namespace ColorPicker.Controls
 
         private static string ColorToHex(Color color, string oldValue = "")
         {
-            string newHexString = BitConverter.ToString(new byte[] { color.R, color.G, color.B }).Replace("-", string.Empty, StringComparison.InvariantCulture);
+            string newHexString = Convert.ToHexString(new byte[] { color.R, color.G, color.B });
             newHexString = newHexString.ToLowerInvariant();
 
             // Return only with hashtag if user typed it before

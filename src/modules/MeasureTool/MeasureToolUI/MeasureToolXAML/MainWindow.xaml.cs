@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -14,6 +15,7 @@ using Microsoft.UI.Xaml.Input;
 using Settings.UI.Library.Enumerations;
 using Windows.Graphics;
 using WinUIEx;
+
 using static NativeMethods;
 
 namespace MeasureToolUI
@@ -62,6 +64,7 @@ namespace MeasureToolUI
             _ = SetWindowLong(hwnd, GWL_STYLE, windowStyle);
 
             _coreLogic = core;
+            _coreLogic.InitResources();
             Closed += MainWindow_Closed;
             DisplayArea displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Nearest);
             float dpiScale = _coreLogic.GetDPIScaleForWindow((int)hwnd);

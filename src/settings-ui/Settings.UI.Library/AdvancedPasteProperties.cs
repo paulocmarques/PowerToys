@@ -4,6 +4,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Settings.UI.Library.Attributes;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
@@ -21,17 +22,17 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             PasteAsMarkdownShortcut = new();
             PasteAsJsonShortcut = new();
             CustomActions = new();
+            AdditionalActions = new();
+            IsAdvancedAIEnabled = false;
             ShowCustomPreview = true;
-            SendPasteKeyCombination = true;
             CloseAfterLosingFocus = false;
         }
 
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
-        public bool ShowCustomPreview { get; set; }
+        public bool IsAdvancedAIEnabled { get; set; }
 
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
-        [CmdConfigureIgnore]
-        public bool SendPasteKeyCombination { get; set; }
+        public bool ShowCustomPreview { get; set; }
 
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
         public bool CloseAfterLosingFocus { get; set; }
@@ -50,7 +51,11 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         [JsonPropertyName("custom-actions")]
         [CmdConfigureIgnoreAttribute]
-        public AdvancedPasteCustomActions CustomActions { get; set; }
+        public AdvancedPasteCustomActions CustomActions { get; init; }
+
+        [JsonPropertyName("additional-actions")]
+        [CmdConfigureIgnoreAttribute]
+        public AdvancedPasteAdditionalActions AdditionalActions { get; init; }
 
         public override string ToString()
             => JsonSerializer.Serialize(this);

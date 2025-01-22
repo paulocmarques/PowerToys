@@ -35,6 +35,8 @@ properties:
           Enabled: true
         MouseWithoutBorders:
           Enabled: true
+        NewPlus:
+          Enabled: true
         Peek:
           Enabled: true
         PowerRename:
@@ -60,8 +62,6 @@ properties:
         Workspaces:
           Enabled: true
         ShortcutGuide:
-          Enabled: true
-        VideoConference:
           Enabled: true
         MeasureTool:
           Enabled: true

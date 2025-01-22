@@ -3,9 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+
+using System.Linq;
+using AdvancedPaste.Converters;
 using AdvancedPaste.Helpers;
+using AdvancedPaste.Models;
 using AdvancedPaste.Settings;
+using AdvancedPaste.ViewModels;
+
 using ManagedCommon;
+using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using WinUIEx;
@@ -22,21 +29,36 @@ namespace AdvancedPaste
 
         public MainWindow()
         {
-            this.InitializeComponent();
+            InitializeComponent();
 
             _userSettings = App.GetService<IUserSettings>();
 
+            var optionsViewModel = App.GetService<OptionsViewModel>();
+
             var baseHeight = MinHeight;
+            var coreActionCount = PasteFormat.MetadataDict.Values.Count(metadata => metadata.IsCoreAction);
 
             void UpdateHeight()
             {
-                var trimmedCustomActionCount = Math.Min(_userSettings.CustomActions.Count, 5);
-                Height = MinHeight = baseHeight + (trimmedCustomActionCount * 40);
+                double GetHeight(int maxCustomActionCount) =>
+                    baseHeight +
+                    new PasteFormatsToHeightConverter().GetHeight(coreActionCount + _userSettings.AdditionalActions.Count) +
+                    new PasteFormatsToHeightConverter() { MaxItems = maxCustomActionCount }.GetHeight(optionsViewModel.IsCustomAIServiceEnabled ? _userSettings.CustomActions.Count : 0);
+
+                MinHeight = GetHeight(1);
+                Height = GetHeight(5);
             }
 
             UpdateHeight();
 
-            _userSettings.CustomActions.CollectionChanged += (_, _) => UpdateHeight();
+            _userSettings.Changed += (_, _) => UpdateHeight();
+            optionsViewModel.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(optionsViewModel.IsCustomAIServiceEnabled))
+                {
+                    UpdateHeight();
+                }
+            };
 
             AppWindow.SetIcon("Assets/AdvancedPaste/AdvancedPaste.ico");
             this.ExtendsContentIntoTitleBar = true;
@@ -60,6 +82,7 @@ namespace AdvancedPaste
             };
 
             WindowHelpers.BringToForeground(this.GetWindowHandle());
+            WindowHelpers.ForceTopBorder1PixelInsetOnWindows10(this.GetWindowHandle());
         }
 
         private void OnActivated(object sender, WindowActivatedEventArgs args)
@@ -75,6 +98,7 @@ namespace AdvancedPaste
             if (!_disposedValue)
             {
                 _msgMonitor?.Dispose();
+                (Application.Current as App).EtwTrace?.Dispose();
 
                 _disposedValue = true;
             }

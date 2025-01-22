@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+
 using ManagedCommon;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -163,7 +164,7 @@ namespace Peek.FilePreviewer.Controls
                 if (!_originalBackgroundColor.HasValue)
                 {
                     // HACK: We used to store PreviewBrowser.DefaultBackgroundColor here, but WebView started returning transparent when running without a debugger attached. We want html files to be seen as in the browser, which has white as a default background color.
-                    _originalBackgroundColor = Colors.White;
+                    _originalBackgroundColor = Microsoft.UI.Colors.White;
                 }
 
                 // Setting the background color to transparent when initially loading the WebView2 component.
@@ -230,10 +231,11 @@ namespace Peek.FilePreviewer.Controls
                 // When using Monaco, we show menu items that call the appropriate JS functions -
                 // WebView2 isn't able to show a "Copy" menu item of its own.
                 return [
-                           CreateCommandMenuItem("ContextMenu_Copy", "runCopyCommand"),
-                           new Separator(),
-                           CreateCommandMenuItem("ContextMenu_ToggleTextWrapping", "runToggleTextWrapCommand"),
-                       ];
+                    CreateCommandMenuItem("ContextMenu_Copy", "runCopyCommand"),
+                    new Separator(),
+                    CreateCommandMenuItem("ContextMenu_ToggleTextWrapping", "runToggleTextWrapCommand"),
+                    CreateCommandMenuItem("ContextMenu_ToggleMinimap", "runToggleMinimap")
+                ];
             }
             else
             {

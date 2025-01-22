@@ -13,6 +13,7 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+
 using Common.UI;
 using FancyZonesEditor.Models;
 using FancyZonesEditor.Utils;
@@ -225,7 +226,9 @@ namespace FancyZonesEditor
             }
 
             LayoutNameText.Text = defaultNamePrefix + " " + (++maxCustomIndex);
+
             GridLayoutRadioButton.IsChecked = true;
+            CanvasLayoutRadioButton.IsChecked = false;
             GridLayoutRadioButton.Focus();
             await NewLayoutDialog.ShowAsync();
         }

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ManagedCommon;
@@ -230,7 +231,7 @@ namespace Peek.UI.Views
             if (AppWindowTitleBar.IsCustomizationSupported())
             {
                 AppWindow appWindow = mainWindow.AppWindow;
-                appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+                mainWindow.ExtendsContentIntoTitleBar = true;
                 appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
                 appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
                 appWindow.TitleBar.ButtonForegroundColor = ThemeHelpers.GetAppTheme() == AppTheme.Light ? Colors.DarkSlateGray : Colors.White;

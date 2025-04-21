@@ -128,6 +128,7 @@
                 "PowerToys.KeyboardManager.dll",
                 "KeyboardManagerEditor\\PowerToys.KeyboardManagerEditor.exe",
                 "KeyboardManagerEngine\\PowerToys.KeyboardManagerEngine.exe",
+                "PowerToys.KeyboardManagerEditorLibraryWrapper.dll",
 
                 "PowerToys.Launcher.dll",
                 "PowerToys.PowerLauncher.dll",
@@ -216,7 +217,10 @@
                 "PowerToys.ZoomItSettingsInterop.dll",
 
                 "WinUI3Apps\\PowerToys.Settings.dll",
-                "WinUI3Apps\\PowerToys.Settings.exe"
+                "WinUI3Apps\\PowerToys.Settings.exe",
+
+                "PowerToys.CmdPalModuleInterface.dll",
+                "*Microsoft.CmdPal.UI_*.msix"
             ],
             "SigningInfo": {
                 "Operations": [

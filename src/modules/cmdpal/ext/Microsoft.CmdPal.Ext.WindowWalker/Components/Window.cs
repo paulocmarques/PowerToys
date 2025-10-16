@@ -163,7 +163,7 @@ internal sealed class Window
         {
             if (!NativeMethods.ShowWindow(Hwnd, ShowWindowCommand.Restore))
             {
-                // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+                // ShowWindow doesn't work if the process is running elevated: fall back to SendMessage
                 _ = NativeMethods.SendMessage(Hwnd, Win32Constants.WM_SYSCOMMAND, Win32Constants.SC_RESTORE);
             }
         }
@@ -324,7 +324,7 @@ internal sealed class Window
 
             // Correct the process data if the window belongs to a uwp app hosted by 'ApplicationFrameHost.exe'
             // (This only works if the window isn't minimized. For minimized windows the required child window isn't assigned.)
-            if (string.Equals(_handlesToProcessCache[hWindow].Name, "ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase))
+            if (_handlesToProcessCache[hWindow].IsUwpAppFrameHost)
             {
                 new Task(() =>
                 {

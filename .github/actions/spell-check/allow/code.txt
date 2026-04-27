@@ -1,6 +1,7 @@
 # COLORS
 
 argb
+Bgr
 bgra
 BLACKONWHITE
 BLUEGRAY
@@ -18,6 +19,7 @@ OLIVEGREEN
 PALEBLUE
 PArgb
 Pbgra
+SRGBTo
 WHITEONBLACK
 
 
@@ -28,6 +30,7 @@ RUS
 
 AYUV
 bak
+HDP
 Bcl
 bgcode
 Deflatealgorithm
@@ -38,6 +41,7 @@ Gbps
 gcode
 Heatshrink
 Mbits
+Kbits
 MBs
 mkv
 msix
@@ -95,7 +99,9 @@ OTP
 Yubi
 Yubico
 Perplexity
+Groq
 svgl
+devhome
 
 # KEYS
 
@@ -121,6 +127,7 @@ HOLDSPACE
 HOLDBACKSPACE
 IDIGNORE
 KBDLLHOOKSTRUCT
+keydowns
 keyevent
 LAlt
 LBUTTON
@@ -294,6 +301,8 @@ pwa
 
 AOT
 Aot
+ify
+TFM
 
 # YML
 onefuzz
@@ -312,6 +321,7 @@ xef
 xes
 PACKAGEVERSIONNUMBER
 APPXMANIFESTVERSION
+PROGMAN
 
 # MRU lists
 CACHEWRITE
@@ -321,3 +331,66 @@ REGSTR
 
 # Misc Win32 APIs and PInvokes
 INVOKEIDLIST
+MEMORYSTATUSEX
+ABE
+Mdt
+HTCAPTION
+POSCHANGED
+QPC
+QUERYPOS
+SETAUTOHIDEBAR
+ULW
+WINDOWPOS
+WINEVENTPROC
+WORKERW
+FULLSCREENAPP
+
+# COM/WinRT interface prefixes and type fragments
+BAlt
+BShift
+Cmanifest
+Cmodule
+Cuuid
+Dng
+IApplication
+IDisposable
+IEnum
+IFolder
+IInitialize
+IMemory
+IOle
+ipreview
+IProperty
+IShell
+ithumbnail
+IVirtual
+
+# Test frameworks
+MSTEST
+
+# PowerRename metadata pattern abbreviations (used in tests and regex patterns)
+DDDD
+FFF
+HHH
+riday
+YYY
+
+# Unicode
+precomposed
+
+# GitHub issue/PR commands
+azp
+feedbackhub
+needinfo
+reportbug
+
+#ffmpeg
+crf
+nostdin
+
+# Performance counter keys
+engtype
+Nonpaged
+
+# XAML
+Untargeted

@@ -21,7 +21,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private readonly PowerAccentSettings _powerAccentSettings;
 
-        private readonly ISettingsUtils _settingsUtils;
+        private readonly SettingsUtils _settingsUtils;
 
         private const string SpecialGroup = "QuickAccent_Group_Special";
         private const string LanguageGroup = "QuickAccent_Group_Language";
@@ -89,7 +89,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private Func<string, int> SendConfigMSG { get; }
 
-        public PowerAccentViewModel(ISettingsUtils settingsUtils, ISettingsRepository<GeneralSettings> settingsRepository, Func<string, int> ipcMSGCallBackFunc)
+        public PowerAccentViewModel(SettingsUtils settingsUtils, ISettingsRepository<GeneralSettings> settingsRepository, Func<string, int> ipcMSGCallBackFunc)
         {
             // To obtain the general settings configurations of PowerToys Settings.
             ArgumentNullException.ThrowIfNull(settingsRepository);
@@ -113,20 +113,25 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             _excludedApps = _powerAccentSettings.Properties.ExcludedApps.Value;
 
-            if (!string.IsNullOrWhiteSpace(_powerAccentSettings.Properties.SelectedLang.Value) && !_powerAccentSettings.Properties.SelectedLang.Value.Contains("ALL"))
-            {
-                SelectedLanguageOptions = _powerAccentSettings.Properties.SelectedLang.Value.Split(',')
-                   .Select(l => Languages.Find(lang => lang.LanguageCode == l))
-                   .Where(l => l != null) // Wrongly typed languages will appear as null after find. We want to remove those to avoid crashes.
-                   .ToArray();
-            }
-            else if (_powerAccentSettings.Properties.SelectedLang.Value.Contains("ALL"))
+            var selectedLangEntries = _powerAccentSettings.Properties.SelectedLang.Value
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .ToArray();
+
+            if (selectedLangEntries.Any(l => l.Equals("ALL", StringComparison.OrdinalIgnoreCase)))
             {
                 SelectedLanguageOptions = Languages.ToArray();
             }
+            else if (selectedLangEntries.Length > 0)
+            {
+                SelectedLanguageOptions = selectedLangEntries
+                    .Select(l => Languages.Find(lang => lang.LanguageCode.Equals(l, StringComparison.OrdinalIgnoreCase)))
+                    .Where(l => l != null) // Unrecognized language codes (e.g. manual edits, removed languages) are skipped.
+                    .ToArray();
+            }
             else
             {
-                SelectedLanguageOptions = Array.Empty<PowerAccentLanguageModel>();
+                SelectedLanguageOptions = [];
             }
 
             _toolbarPositionIndex = Array.IndexOf(_toolbarOptions, _powerAccentSettings.Properties.ToolbarPosition.Value);
